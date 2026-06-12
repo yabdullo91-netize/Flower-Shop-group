@@ -1,0 +1,210 @@
+﻿@inject NavigationManager Navigation
+
+<nav class="flex flex-col gap-6 px-3">
+    
+    @* --- Группа: Основное --- *@
+    <div class="flex flex-col gap-1">
+        @if (!SidebarCollapsed)
+        {
+            <button @onclick="ToggleMain" class="flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest hover:text-zinc-300 w-full text-left">
+                <span>Основное</span>
+                <LucideIcon Name="@(_groupMainOpen ? "chevron-down" : "chevron-right")" Class="w-3 h-3 text-zinc-600" />
+            </button>
+        }
+        
+        @if (_groupMainOpen || SidebarCollapsed)
+        {
+            <div class="flex flex-col gap-0.5">
+                <NavLink href="" hrefMatch="NavLinkMatch.All" class="@(GetLinkClass(""))" title="Дашборд">
+                    <LucideIcon Name="home" Class="@(GetIconClass(""))" />
+                    @if (!SidebarCollapsed) { <span class="transition-opacity duration-200">Дашборд</span> }
+                </NavLink>
+                <NavLink href="orders" class="@(GetLinkClass("orders"))" title="Заказы">
+                    <LucideIcon Name="shopping-bag" Class="@(GetIconClass("orders"))" />
+                    @if (!SidebarCollapsed) { <span>Заказы</span> }
+                </NavLink>
+            </div>
+        }
+    </div>
+
+    @* --- Группа: Каталог --- *@
+    <div class="flex flex-col gap-1">
+        @if (!SidebarCollapsed)
+        {
+            <button @onclick="ToggleCatalog" class="flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest hover:text-zinc-300 w-full text-left">
+                <span>Каталог</span>
+                <LucideIcon Name="@(_groupCatalogOpen ? "chevron-down" : "chevron-right")" Class="w-3 h-3 text-zinc-600" />
+            </button>
+        }
+
+        @if (_groupCatalogOpen || SidebarCollapsed)
+        {
+            <div class="flex flex-col gap-0.5">
+                <NavLink href="products" class="@(GetLinkClass("products"))" title="Продукты">
+                    <LucideIcon Name="package" Class="@(GetIconClass("products"))" />
+                    @if (!SidebarCollapsed) { <span>Продукты</span> }
+                </NavLink>
+                <NavLink href="addons" class="@(GetLinkClass("addons"))" title="Аддоны">
+                    <LucideIcon Name="gift" Class="@(GetIconClass("addons"))" />
+                    @if (!SidebarCollapsed) { <span>Аддоны</span> }
+                </NavLink>
+                <NavLink href="postcards" class="@(GetLinkClass("postcards"))" title="Открытки">
+                    <LucideIcon Name="mail" Class="@(GetIconClass("postcards"))" />
+                    @if (!SidebarCollapsed) { <span>Открытки</span> }
+                </NavLink>
+            </div>
+        }
+    </div>
+
+    @* --- Группа: Управление --- *@
+    <div class="flex flex-col gap-1">
+        @if (!SidebarCollapsed)
+        {
+            <button @onclick="ToggleManage" class="flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest hover:text-zinc-300 w-full text-left">
+                <span>Управление</span>
+                <LucideIcon Name="@(_groupManageOpen ? "chevron-down" : "chevron-right")" Class="w-3 h-3 text-zinc-600" />
+            </button>
+        }
+
+        @if (_groupManageOpen || SidebarCollapsed)
+        {
+            <div class="flex flex-col gap-0.5">
+                <NavLink href="reviews" class="@(GetLinkClass("reviews"))" title="Отзывы">
+                    <LucideIcon Name="star" Class="@(GetIconClass("reviews"))" />
+                    @if (!SidebarCollapsed) { <span>Отзывы</span> }
+                </NavLink>
+                <NavLink href="loyalty" class="@(GetLinkClass("loyalty"))" title="Бонусы">
+                    <LucideIcon Name="percent" Class="@(GetIconClass("loyalty"))" />
+                    @if (!SidebarCollapsed) { <span>Бонусы</span> }
+                </NavLink>
+                <NavLink href="delivery" class="@(GetLinkClass("delivery"))" title="Доставка">
+                    <LucideIcon Name="truck" Class="@(GetIconClass("delivery"))" />
+                    @if (!SidebarCollapsed) { <span>Доставка</span> }
+                </NavLink>
+            </div>
+        }
+    </div>
+
+    @* --- Группа: Администрирование (SuperAdmin) --- *@
+    <AuthorizeView Roles="SuperAdmin">
+        <Authorized>
+            <div class="flex flex-col gap-1 border-t border-zinc-900 pt-4">
+                @if (!SidebarCollapsed)
+                {
+                    <button @onclick="ToggleAdmin" class="flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-emerald-500/85 uppercase tracking-widest hover:text-emerald-400 w-full text-left">
+                        <span>Система</span>
+                        <LucideIcon Name="@(_groupAdminOpen ? "chevron-down" : "chevron-right")" Class="w-3 h-3 text-emerald-800" />
+                    </button>
+                }
+
+                @if (_groupAdminOpen || SidebarCollapsed)
+                {
+                    <div class="flex flex-col gap-0.5">
+                        <NavLink href="users" class="@(GetLinkClass("users"))" title="Пользователи">
+                            <LucideIcon Name="users" Class="@(GetIconClass("users"))" />
+                            @if (!SidebarCollapsed) { <span>Пользователи</span> }
+                        </NavLink>
+                        <NavLink href="promo-codes" class="@(GetLinkClass("promo-codes"))" title="Промокоды">
+                            <LucideIcon Name="tag" Class="@(GetIconClass("promo-codes"))" />
+                            @if (!SidebarCollapsed) { <span>Промокоды</span> }
+                        </NavLink>
+                        <NavLink href="banners" class="@(GetLinkClass("banners"))" title="Баннеры">
+                            <LucideIcon Name="image" Class="@(GetIconClass("banners"))" />
+                            @if (!SidebarCollapsed) { <span>Баннеры</span> }
+                        </NavLink>
+                        <NavLink href="admin-users" class="@(GetLinkClass("admin-users"))" title="Администраторы">
+                            <LucideIcon Name="shield" Class="@(GetIconClass("admin-users"))" />
+                            @if (!SidebarCollapsed) { <span>Админы</span> }
+                        </NavLink>
+                        <NavLink href="push" class="@(GetLinkClass("push"))" title="Push рассылки">
+                            <LucideIcon Name="send" Class="@(GetIconClass("push"))" />
+                            @if (!SidebarCollapsed) { <span>Push-рассылки</span> }
+                        </NavLink>
+                        <NavLink href="settings" class="@(GetLinkClass("settings"))" title="Настройки">
+                            <LucideIcon Name="settings" Class="@(GetIconClass("settings"))" />
+                            @if (!SidebarCollapsed) { <span>Настройки</span> }
+                        </NavLink>
+                        <NavLink href="audit-log" class="@(GetLinkClass("audit-log"))" title="Журнал логов">
+                            <LucideIcon Name="file-text" Class="@(GetIconClass("audit-log"))" />
+                            @if (!SidebarCollapsed) { <span>Логи аудита</span> }
+                        </NavLink>
+                    </div>
+                }
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</nav>
+
+@code {
+    [Parameter] public bool SidebarCollapsed { get; set; }
+
+    private string _currentPath = "";
+    private bool _groupMainOpen = true;
+    private bool _groupCatalogOpen = true;
+    private bool _groupManageOpen = true;
+    private bool _groupAdminOpen = true;
+
+    protected override void OnInitialized()
+    {
+        _currentPath = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?')[0];
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _currentPath = Navigation.ToBaseRelativePath(e.Location).Split('?')[0];
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleMain() => _groupMainOpen = !_groupMainOpen;
+    private void ToggleCatalog() => _groupCatalogOpen = !_groupCatalogOpen;
+    private void ToggleManage() => _groupManageOpen = !_groupManageOpen;
+    private void ToggleAdmin() => _groupAdminOpen = !_groupAdminOpen;
+
+    private bool IsActive(string href)
+    {
+        if (string.IsNullOrEmpty(href))
+        {
+            return string.IsNullOrEmpty(_currentPath);
+        }
+        return _currentPath.StartsWith(href, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetLinkClass(string href)
+    {
+        var baseClass = "flex items-center gap-3 px-3 h-11 rounded-lg text-xs font-medium theme-transition select-none border border-transparent ";
+        if (SidebarCollapsed)
+        {
+            baseClass += "justify-center w-11 h-11 mx-auto ";
+        }
+        
+        if (IsActive(href))
+        {
+            if (IsSystemPage(href))
+            {
+                return baseClass + "bg-emerald-500/10 text-emerald-400 border-emerald-500/15 font-semibold";
+            }
+            return baseClass + "bg-indigo-500/10 text-indigo-400 border-indigo-500/15 font-semibold";
+        }
+        return baseClass + "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60";
+    }
+
+    private string GetIconClass(string href)
+    {
+        if (IsActive(href))
+        {
+            return "w-5 h-5 text-zinc-100";
+        }
+        return "w-5 h-5 text-zinc-500 group-hover:text-zinc-300";
+    }
+
+    private bool IsSystemPage(string href)
+    {
+        return href is "users" or "promo-codes" or "banners" or "admin-users" or "push" or "settings" or "audit-log";
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

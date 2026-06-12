@@ -1,0 +1,118 @@
+@page "/addons"
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+
+@inject AddonService AddonService
+@inject ISnackbar Snackbar
+@inject DialogHelper DialogHelper
+
+<PageTitle>FlowerHouse — Аддоны</PageTitle>
+
+<PageHeader Title="Аддоны" Subtitle="Дополнения к букетам (открытки, конфеты, игрушки)">
+    <Actions>
+        <button @onclick="OpenCreateDialog" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+            <LucideIcon Name="plus" Class="w-4 h-4" />
+            <span>Добавить аддон</span>
+        </button>
+    </Actions>
+</PageHeader>
+
+<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+    <UiTable Items="@_addons" TItem="AddonDto" IsLoading="@_loading" ShowPagination="false" ColSpan="4">
+        <HeaderTemplate>
+            <th class="p-4">Название</th>
+            <th class="p-4 w-44">Цена</th>
+            <th class="p-4 w-36 text-center">Активен</th>
+            <th class="p-4 w-28 text-center">Действия</th>
+        </HeaderTemplate>
+        <RowTemplate>
+            <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">@context.Name</td>
+            <td class="p-4 font-medium text-slate-500 dark:text-zinc-400">@context.Price.ToString("N0") с.</td>
+            <td class="p-4 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold @(context.IsActive ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-500/10 text-slate-400")">
+                    @(context.IsActive ? "Да" : "Нет")
+                </span>
+            </td>
+            <td class="p-4 text-center">
+                <div class="flex items-center justify-center gap-1">
+                    <button @onclick="() => OpenEditDialog(context)" 
+                            class="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                        <LucideIcon Name="edit" Class="w-4 h-4" />
+                    </button>
+                    <button @onclick="() => DeleteAddon(context)" 
+                            class="p-1.5 text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                        <LucideIcon Name="trash" Class="w-4 h-4" />
+                    </button>
+                </div>
+            </td>
+        </RowTemplate>
+    </UiTable>
+</div>
+
+<UiModal IsOpen="_dialogVisible" Title="@(_editingAddon != null ? "Редактировать аддон" : "Создать аддон")" OnClose="() => _dialogVisible = false">
+    <ChildContent>
+        <div class="space-y-4 pt-2">
+            <MudTextField T="string" @bind-Value="_editName" Label="Название" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <MudNumericField T="decimal" @bind-Value="_editPrice" Label="Цена (сомони)" Required="true" Variant="Variant.Outlined" Min="0" Class="mb-3" />
+            <div class="flex items-center justify-between py-2 border-t border-slate-100 dark:border-zinc-800/50 mt-4">
+                <span class="text-xs font-semibold text-slate-500 dark:text-zinc-400">Активен</span>
+                <MudSwitch T="bool" @bind-Value="_editIsActive" Color="Color.Success" />
+            </div>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button @onclick="() => _dialogVisible = false" 
+                class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+            Отмена
+        </button>
+        <button @onclick="SaveAddon" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors">
+            Сохранить
+        </button>
+    </FooterContent>
+</UiModal>
+
+@code {
+    private bool _loading = true;
+    private List<AddonDto> _addons = [];
+    private bool _dialogVisible;
+    private AddonDto? _editingAddon;
+    private string _editName = "";
+    private decimal _editPrice;
+    private bool _editIsActive = true;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _addons = await AddonService.GetAddonsAsync() ?? [];
+        _loading = false;
+    }
+
+    private void OpenCreateDialog() { _editingAddon = null; _editName = ""; _editPrice = 0; _editIsActive = true; _dialogVisible = true; }
+    private void OpenEditDialog(AddonDto a) { _editingAddon = a; _editName = a.Name; _editPrice = a.Price; _editIsActive = a.IsActive; _dialogVisible = true; }
+
+    private async Task SaveAddon()
+    {
+        if (string.IsNullOrWhiteSpace(_editName))
+        {
+            Snackbar.Add("Название не может быть пустым", Severity.Warning);
+            return;
+        }
+
+        var req = new AddonCreateRequest { Name = _editName, Price = _editPrice, IsActive = _editIsActive };
+        var ok = _editingAddon != null ? await AddonService.UpdateAsync(_editingAddon.Id, req) : await AddonService.CreateAsync(req);
+        Snackbar.Add(ok ? "Сохранено" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        _dialogVisible = false;
+        if (ok) await LoadData();
+    }
+
+    private async Task DeleteAddon(AddonDto addon)
+    {
+        if (!await DialogHelper.ConfirmAsync($"Удалить \"{addon.Name}\"?")) return;
+        var ok = await AddonService.DeleteAsync(addon.Id);
+        Snackbar.Add(ok ? "Удалено" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        if (ok) await LoadData();
+    }
+}

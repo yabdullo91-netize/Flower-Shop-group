@@ -1,0 +1,110 @@
+﻿@page "/loyalty"
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+
+@inject LoyaltyService LoyaltyService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>FlowerHouse — Бонусная программа</PageTitle>
+
+<PageHeader Title="Бонусная программа" Subtitle="Балансы клиентов и ручная коррекция" />
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Style="border-radius:12px;">
+    <MudTextField T="string" @bind-Value="_search" Label="Поиск по имени или телефону"
+                  Variant="Variant.Outlined" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true"
+                  DebounceInterval="400" OnDebounceIntervalElapsed="_ => _table?.ReloadServerData()" />
+</MudPaper>
+
+<MudTable @ref="_table" T="LoyaltyAccountDto" ServerData="LoadAccounts" Hover="true" Elevation="0"
+          Class="fh-table" Style="border-radius:12px;" Dense="true" Breakpoint="Breakpoint.Sm">
+    <HeaderContent>
+        <MudTh>Клиент</MudTh>
+        <MudTh>Телефон</MudTh>
+        <MudTh>Баланс</MudTh>
+        <MudTh>Тир</MudTh>
+        <MudTh>Всего заработано</MudTh>
+        <MudTh>Действия</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd><MudText Style="font-weight:600;">@context.UserName</MudText></MudTd>
+        <MudTd>@context.UserPhone</MudTd>
+        <MudTd>
+            <MudText Style="font-weight:700;" Color="Color.Primary">@context.Balance</MudText>
+        </MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                     Color="@GetTierColor(context.Tier)">@context.Tier</MudChip>
+        </MudTd>
+        <MudTd>@context.TotalEarned</MudTd>
+        <MudTd>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Edit" OnClick="() => OpenAdjustDialog(context)">
+                Корректировать
+            </MudButton>
+        </MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager PageSizeOptions="new[]{10,25,50}" /></PagerContent>
+</MudTable>
+
+@* Диалог коррекции *@
+<MudDialog @bind-Visible="_dialogVisible" Options="@(new DialogOptions{MaxWidth=MaxWidth.Small,FullWidth=true})">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Коррекция баллов — @_adjustUser?.UserName</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">Текущий баланс: <b>@_adjustUser?.Balance</b></MudText>
+        <MudNumericField T="int" @bind-Value="_adjustAmount" Label="Количество (+ или -)"
+                         Variant="Variant.Outlined" Class="mb-3" />
+        <MudTextField T="string" @bind-Value="_adjustReason" Label="Причина" Required="true"
+                      Variant="Variant.Outlined" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogVisible = false">Отмена</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AdjustPoints"
+                   Disabled="@(string.IsNullOrWhiteSpace(_adjustReason))">
+            Применить
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private MudTable<LoyaltyAccountDto>? _table;
+    private string? _search;
+    private bool _dialogVisible;
+    private LoyaltyAccountDto? _adjustUser;
+    private int _adjustAmount;
+    private string _adjustReason = "";
+
+    private async Task<TableData<LoyaltyAccountDto>> LoadAccounts(TableState state, CancellationToken ct)
+    {
+        var result = await LoyaltyService.GetAccountsAsync(state.Page + 1, state.PageSize, _search);
+        return new TableData<LoyaltyAccountDto>
+        {
+            Items = result?.Items ?? [],
+            TotalItems = result?.TotalCount ?? 0
+        };
+    }
+
+    private void OpenAdjustDialog(LoyaltyAccountDto user)
+    {
+        _adjustUser = user; _adjustAmount = 0; _adjustReason = ""; _dialogVisible = true;
+    }
+
+    private async Task AdjustPoints()
+    {
+        var ok = await LoyaltyService.AdjustPointsAsync(new AdjustPointsRequest
+        { UserId = _adjustUser!.UserId, Amount = _adjustAmount, Reason = _adjustReason });
+        Snackbar.Add(ok ? "Баллы скорректированы" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        _dialogVisible = false;
+        if (ok) await _table!.ReloadServerData();
+    }
+
+    private static Color GetTierColor(string tier) => tier?.ToLower() switch
+    {
+        "gold" or "золото" => Color.Warning,
+        "silver" or "серебро" => Color.Default,
+        "bronze" or "бронза" => Color.Surface,
+        _ => Color.Default
+    };
+}

@@ -1,0 +1,252 @@
+﻿@page "/audit-log"
+@attribute [Authorize(Roles = "SuperAdmin")]
+
+@inject SettingsService SettingsService
+
+<PageTitle>FlowerHouse — Журнал действий</PageTitle>
+
+@* --- Header --- *@
+<div class="mb-6 select-none">
+    <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">Журнал действий</h1>
+    <p class="text-xs text-slate-500 dark:text-zinc-400">Системный аудит всех действий администраторов в панели управления</p>
+</div>
+
+@* --- Filter Bar --- *@
+<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-end theme-transition">
+    @* Search *@
+    <div class="flex-grow flex flex-col gap-1.5 w-full md:w-auto">
+        <label class="text-xs font-semibold text-slate-500 dark:text-zinc-400">Поиск</label>
+        <div class="relative">
+            <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 dark:text-zinc-500">
+                <LucideIcon Name="search" Class="w-4 h-4" />
+            </span>
+            <input type="text" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" placeholder="Поиск по пользователю или действию..."
+                   class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg outline-none text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:border-indigo-500 transition-colors" />
+        </div>
+    </div>
+
+    @* Date Range From *@
+    <div class="flex flex-col gap-1.5 w-full md:w-48">
+        <label class="text-xs font-semibold text-slate-500 dark:text-zinc-400">С даты</label>
+        <input type="date" @bind="_fromDate"
+               class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg outline-none text-slate-900 dark:text-zinc-100 transition-colors" />
+    </div>
+
+    @* Date Range To *@
+    <div class="flex flex-col gap-1.5 w-full md:w-48">
+        <label class="text-xs font-semibold text-slate-500 dark:text-zinc-400">По дату</label>
+        <input type="date" @bind="_toDate"
+               class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg outline-none text-slate-900 dark:text-zinc-100 transition-colors" />
+    </div>
+
+    @* Update Button *@
+    <button @onclick="RefreshLogsAsync" 
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5 h-9 shrink-0 w-full md:w-auto justify-center">
+        <LucideIcon Name="sun" Class="w-4 h-4" />
+        <span>Обновить</span>
+    </button>
+</div>
+
+@* --- Audit Log Table with Expandable Rows --- *@
+<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+    <table class="w-full text-left border-collapse text-xs">
+        <thead class="bg-slate-50 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider select-none">
+            <tr>
+                <th class="p-4 w-10"></th>
+                <th class="p-4 w-44">Дата и время</th>
+                <th class="p-4 w-48">Пользователь</th>
+                <th class="p-4 w-44">Действие</th>
+                <th class="p-4">Описание</th>
+                <th class="p-4 w-36">IP-Адрес</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 dark:divide-zinc-800 text-slate-700 dark:text-zinc-300">
+            @if (_isLoading)
+            {
+                @for (int i = 0; i < 5; i++)
+                {
+                    <tr class="skeleton">
+                        <td class="p-4" colspan="6"><div class="h-4 bg-slate-200 dark:bg-zinc-800 rounded w-2/3"></div></td>
+                    </tr>
+                }
+            }
+            else if (_logs.Count == 0)
+            {
+                <tr>
+                    <td colspan="6" class="p-8 text-center text-slate-400 dark:text-zinc-500 font-medium">
+                        Журнал аудита пуст
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var log in _logs)
+                {
+                    var isExpanded = IsExpanded(log.Id);
+                    <tr @onclick="() => ToggleRow(log.Id)" 
+                        class="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer select-none">
+                        <td class="p-4 text-center">
+                            <LucideIcon Name="@(isExpanded ? "chevron-down" : "chevron-right")" Class="w-4 h-4 text-slate-400" />
+                        </td>
+                        <td class="p-4">
+                            <div class="font-semibold text-slate-900 dark:text-zinc-100">@log.Timestamp.ToString("dd.MM.yyyy")</div>
+                            <div class="text-[10px] text-slate-400 dark:text-zinc-500">@log.Timestamp.ToString("HH:mm:ss")</div>
+                        </td>
+                        <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">
+                            @log.UserName
+                        </td>
+                        <td class="p-4">
+                            <span class="px-2.5 py-1 text-[10px] font-bold border rounded-full tracking-wide @(GetActionBadgeClass(log.Action))">
+                                @log.Action
+                            </span>
+                        </td>
+                        <td class="p-4 text-slate-500 dark:text-zinc-400 truncate max-w-xs">
+                            @log.Details
+                        </td>
+                        <td class="p-4 font-mono text-[10px] text-slate-400">
+                            @(log.IpAddress ?? "—")
+                        </td>
+                    </tr>
+
+                    @if (isExpanded)
+                    {
+                        <tr class="bg-slate-50/50 dark:bg-zinc-950/20">
+                            <td class="p-4"></td>
+                            <td colspan="5" class="p-4 text-slate-600 dark:text-zinc-400">
+                                <div class="flex flex-col gap-2">
+                                    <div class="font-semibold text-slate-900 dark:text-zinc-200">Полные детали события:</div>
+                                    <pre class="bg-slate-100 dark:bg-zinc-950 p-4 border border-slate-200 dark:border-zinc-800 rounded-lg text-[11px] font-mono whitespace-pre-wrap select-text text-slate-800 dark:text-zinc-300">
+                                        @log.Details
+                                    </pre>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </table>
+
+    @* Pagination *@
+    @if (_totalPages > 1 && !_isLoading)
+    {
+        <div class="flex items-center justify-between px-6 py-3 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 text-xs select-none">
+            <span class="text-slate-500 dark:text-zinc-400">
+                Страница <strong>@_currentPage</strong> из <strong>@_totalPages</strong>
+            </span>
+            <div class="flex items-center gap-2">
+                <button @onclick="PrevPageAsync" disabled="@(_currentPage <= 1)" class="flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-zinc-800 rounded-md bg-white dark:bg-zinc-900 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-medium transition-colors">
+                    <LucideIcon Name="chevron-left" Class="w-3.5 h-3.5" />
+                    <span>Назад</span>
+                </button>
+                <button @onclick="NextPageAsync" disabled="@(_currentPage >= _totalPages)" class="flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-zinc-800 rounded-md bg-white dark:bg-zinc-900 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-medium transition-colors">
+                    <span>Вперед</span>
+                    <LucideIcon Name="chevron-right" Class="w-3.5 h-3.5" />
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private List<AuditLogDto> _logs = new();
+    private string _search = "";
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
+
+    private int _currentPage = 1;
+    private int _pageSize = 20;
+    private int _totalPages = 1;
+
+    private readonly HashSet<int> _expandedRows = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLogsAsync();
+    }
+
+    private async Task LoadLogsAsync()
+    {
+        _isLoading = true;
+        _expandedRows.Clear();
+        StateHasChanged();
+
+        try
+        {
+            var result = await SettingsService.GetAuditLogAsync(_currentPage, _pageSize, _fromDate, _toDate, _search);
+            if (result != null)
+            {
+                _logs = result.Items ?? new();
+                _totalPages = (int)Math.Ceiling((double)result.TotalCount / _pageSize);
+            }
+        }
+        catch
+        {
+            _logs = new();
+            _totalPages = 1;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshLogsAsync()
+    {
+        _currentPage = 1;
+        await LoadLogsAsync();
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await RefreshLogsAsync();
+        }
+    }
+
+    private async Task PrevPageAsync()
+    {
+        if (_currentPage > 1)
+        {
+            _currentPage--;
+            await LoadLogsAsync();
+        }
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (_currentPage < _totalPages)
+        {
+            _currentPage++;
+            await LoadLogsAsync();
+        }
+    }
+
+    private bool IsExpanded(int id) => _expandedRows.Contains(id);
+
+    private void ToggleRow(int id)
+    {
+        if (_expandedRows.Contains(id))
+            _expandedRows.Remove(id);
+        else
+            _expandedRows.Add(id);
+    }
+
+    private static string GetActionBadgeClass(string action)
+    {
+        var act = action.ToLowerInvariant();
+        if (act.Contains("создан") || act.Contains("create") || act.Contains("добавлен"))
+            return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+        if (act.Contains("удален") || act.Contains("delete") || act.Contains("заблокирован"))
+            return "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20";
+        if (act.Contains("обновлен") || act.Contains("update") || act.Contains("изменен"))
+            return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+        if (act.Contains("вход") || act.Contains("login") || act.Contains("авторизация"))
+            return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
+        
+        return "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20";
+    }
+}

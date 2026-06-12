@@ -1,0 +1,29 @@
+﻿<MudCard Outlined="true" Class="relative overflow-hidden theme-transition hover:border-zinc-400 dark:hover:border-zinc-700">
+    <MudCardContent Class="pa-5">
+        <div class="flex justify-between items-start">
+            <span class="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">@Title</span>
+            <MudIcon Icon="@Icon" Class="text-zinc-400" Size="Size.Small" />
+        </div>
+        
+        <div class="flex items-baseline gap-2 mt-2">
+            <span class="text-2xl font-bold tracking-tight">@Value</span>
+            
+            @if (TrendPercentage != 0)
+            {
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded @(TrendPercentage >= 0 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400")">
+                    @(TrendPercentage >= 0 ? "+" : "")@TrendPercentage%
+                </span>
+            }
+        </div>
+        
+        <p class="text-[10px] text-zinc-400 mt-1">@Subtitle</p>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public string Subtitle { get; set; } = "";
+    [Parameter] public string Icon { get; set; } = "";
+    [Parameter] public decimal TrendPercentage { get; set; }
+}

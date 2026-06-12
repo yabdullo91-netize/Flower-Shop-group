@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlowerHouse — Панель управления</title>
+    <meta name="description" content="Административная панель управления интернет-магазином цветов FlowerHouse" />
+    <base href="/" />
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            light: '#a78bfa',
+                            DEFAULT: '#7c3aed',
+                            dark: '#6d28d9',
+                        },
+                        superbrand: {
+                            light: '#34d399',
+                            DEFAULT: '#10b981',
+                            dark: '#059669',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- MudBlazor CSS -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+
+    <!-- App CSS -->
+    <link href="css/app.css" rel="stylesheet" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="icon-192.png" />
+</head>
+
+<body>
+    <div id="app">
+        <!-- Loading screen while WASM loads -->
+        <div class="loading-screen">
+            <div class="loading-content">
+                <div class="loading-logo">🌸</div>
+                <h2 class="loading-title">FlowerHouse</h2>
+                <p class="loading-subtitle">Загрузка панели управления...</p>
+                <div class="loading-bar">
+                    <div class="loading-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        Произошла необработанная ошибка. 
+        <a href="/" class="reload">Перезагрузить</a>
+        <span class="dismiss">🗙</span>
+    </div>
+
+    <!-- Blazor WASM -->
+    <script src="_framework/blazor.webassembly.js"></script>
+
+    <!-- MudBlazor JS -->
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+
+    <!-- LocalStorage & Theme JS Interop -->
+    <script>
+        window.localStorageHelper = {
+            getItem: function (key) {
+                return localStorage.getItem(key);
+            },
+            setItem: function (key, value) {
+                localStorage.setItem(key, value);
+            },
+            removeItem: function (key) {
+                localStorage.removeItem(key);
+            }
+        };
+        window.themeHelper = {
+            setTheme: function (theme) {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            },
+            initTheme: function () {
+                var theme = localStorage.getItem('theme');
+                if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                    return 'dark';
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    return 'light';
+                }
+            }
+        };
+        // Run immediately to prevent flickering
+        window.themeHelper.initTheme();
+    </script>
+</body>
+
+</html>

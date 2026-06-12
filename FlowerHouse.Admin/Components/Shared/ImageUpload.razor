@@ -1,0 +1,143 @@
+﻿@* Drag & Drop загрузка изображений с превью *@
+
+<MudPaper Outlined="true" Class="pa-4" Style="border-radius: 12px; border-style: dashed;">
+    <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                   Accept=".jpg,.jpeg,.png,.webp"
+                   MaximumFileCount="@MaxFiles"
+                   FilesChanged="OnFilesChanged"
+                   Hidden="false"
+                   InputClass="absolute mud-width-full mud-height-full overflow-hidden z-2"
+                   InputStyle="opacity:0"
+                   @ondragenter="@SetDragClass"
+                   @ondragleave="@ClearDragClass"
+                   @ondragend="@ClearDragClass">
+        <ActivatorContent>
+            <MudPaper Height="120px" Outlined="false" Elevation="0"
+                      Class="@($"d-flex flex-column align-center justify-center gap-2 {_dragClass}")">
+                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Перетащите файлы сюда или нажмите для выбора
+                </MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Форматы: JPG, PNG, WebP • Макс. @MaxFiles файлов • До @MaxSizeMb МБ каждый
+                </MudText>
+            </MudPaper>
+        </ActivatorContent>
+    </MudFileUpload>
+
+    @* Превью загруженных файлов *@
+    @if (_previewUrls.Count > 0)
+    {
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+            Выбрано файлов: @_previewUrls.Count
+        </MudText>
+        <MudGrid Spacing="2">
+            @foreach (var (url, index) in _previewUrls.Select((u, i) => (u, i)))
+            {
+                <MudItem xs="4" sm="3" md="2">
+                    <MudPaper Class="pa-1 position-relative" Style="border-radius: 8px;" Elevation="2">
+                        <MudImage Src="@url" Alt="Preview"
+                                  Width="100" Height="100" ObjectFit="ObjectFit.Cover"
+                                  Class="rounded" Style="width:100%;height:100px;" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                       Color="Color.Error" Style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5)"
+                                       OnClick="() => RemoveFile(index)" />
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+
+    @* Существующие изображения (для режима редактирования) *@
+    @if (ExistingImages?.Any() == true)
+    {
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+            Текущие изображения:
+        </MudText>
+        <MudGrid Spacing="2">
+            @foreach (var img in ExistingImages)
+            {
+                <MudItem xs="4" sm="3" md="2">
+                    <MudPaper Class="pa-1 position-relative" Style="border-radius: 8px;" Elevation="2">
+                        <MudImage Src="@img.Url" Alt="@img.Url"
+                                  Width="100" Height="100" ObjectFit="ObjectFit.Cover"
+                                  Class="rounded" Style="width:100%;height:100px;" />
+                        @if (OnDeleteExisting.HasDelegate)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                           Color="Color.Error"
+                                           Style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5)"
+                                           OnClick="() => OnDeleteExisting.InvokeAsync(img.Id)" />
+                        }
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public int MaxFiles { get; set; } = 5;
+    [Parameter] public int MaxSizeMb { get; set; } = 5;
+    [Parameter] public List<ExistingImageInfo>? ExistingImages { get; set; }
+    [Parameter] public EventCallback<List<IBrowserFile>> OnFilesSelected { get; set; }
+    [Parameter] public EventCallback<int> OnDeleteExisting { get; set; }
+
+    private List<IBrowserFile> _files = [];
+    private List<string> _previewUrls = [];
+    private string _dragClass = "";
+
+    private async Task OnFilesChanged(IReadOnlyList<IBrowserFile> files)
+    {
+        ClearDragClass();
+        _files.Clear();
+        _previewUrls.Clear();
+
+        foreach (var file in files.Take(MaxFiles))
+        {
+            if (file.Size > MaxSizeMb * 1024 * 1024) continue;
+
+            _files.Add(file);
+
+            // Генерация превью
+            try
+            {
+                var resized = await file.RequestImageFileAsync("image/jpeg", 200, 200);
+                var buffer = new byte[resized.Size];
+                await resized.OpenReadStream(MaxSizeMb * 1024 * 1024).ReadExactlyAsync(buffer);
+                var base64 = Convert.ToBase64String(buffer);
+                _previewUrls.Add($"data:image/jpeg;base64,{base64}");
+            }
+            catch
+            {
+                _previewUrls.Add(""); // Если превью не получилось
+            }
+        }
+
+        await OnFilesSelected.InvokeAsync(_files);
+    }
+
+    private void RemoveFile(int index)
+    {
+        if (index >= 0 && index < _files.Count)
+        {
+            _files.RemoveAt(index);
+            _previewUrls.RemoveAt(index);
+            OnFilesSelected.InvokeAsync(_files);
+        }
+    }
+
+    private void SetDragClass() => _dragClass = "mud-border-primary";
+    private void ClearDragClass() => _dragClass = "";
+
+    /// <summary>
+    /// Информация о существующем изображении (для режима редактирования).
+    /// </summary>
+    public class ExistingImageInfo
+    {
+        public int Id { get; set; }
+        public string Url { get; set; } = "";
+    }
+}

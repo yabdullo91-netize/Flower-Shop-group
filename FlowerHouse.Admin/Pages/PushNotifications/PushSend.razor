@@ -1,0 +1,125 @@
+@page "/push"
+@attribute [Authorize(Roles = "SuperAdmin")]
+
+@inject PushService PushService
+@inject ISnackbar Snackbar
+@inject DialogHelper DialogHelper
+
+<PageTitle>FlowerHouse — Push-уведомления</PageTitle>
+
+<PageHeader Title="Push-уведомления" Subtitle="Массовая рассылка мгновенных push-уведомлений клиентам" />
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    @* Левая колонка: Форма отправки *@
+    <div class="lg:col-span-7 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm theme-transition">
+        <h3 class="text-sm font-bold text-slate-800 dark:text-zinc-200 mb-6 flex items-center gap-2">
+            <LucideIcon Name="send" Class="w-4 h-4 text-indigo-500" />
+            <span>Новое push-уведомление</span>
+        </h3>
+
+        <div class="space-y-4">
+            <MudTextField T="string" @bind-Value="_title" Label="Заголовок уведомления" Required="true"
+                          Variant="Variant.Outlined" Class="mb-3" Immediate="true"
+                          MaxLength="100" Counter="100" />
+
+            <MudTextField T="string" @bind-Value="_body" Label="Текст сообщения" Required="true"
+                          Variant="Variant.Outlined" Lines="4" Class="mb-3" Immediate="true"
+                          MaxLength="500" Counter="500" />
+
+            <MudTextField T="string" @bind-Value="_url" Label="URL-ссылка перехода (опционально)" Variant="Variant.Outlined"
+                          Placeholder="https://flowerhouse.tj/promo..." Class="mb-6" />
+
+            <div class="border-t border-slate-100 dark:border-zinc-800/60 pt-4 flex justify-end">
+                <button @onclick="Send" disabled="@(string.IsNullOrWhiteSpace(_title) || string.IsNullOrWhiteSpace(_body) || _sending)"
+                        class="px-5 py-3 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-1.5 h-12">
+                    @if (_sending)
+                    {
+                        <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1"></span>
+                    }
+                    else
+                    {
+                        <LucideIcon Name="bell" Class="w-4 h-4" />
+                    }
+                    <span>Отправить рассылку</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @* Правая колонка: Предпросмотр в стиле смартфона *@
+    <div class="lg:col-span-5 flex flex-col items-center">
+        <div class="w-full max-w-[320px] bg-slate-900 dark:bg-black border-[10px] border-slate-800 dark:border-zinc-800 rounded-[40px] shadow-2xl h-[560px] relative overflow-hidden select-none flex flex-col justify-between p-4">
+            <!-- Notch / Динамический остров -->
+            <div class="absolute top-2 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-full z-20 flex items-center justify-center">
+                <div class="w-2.5 h-2.5 bg-zinc-900 rounded-full mr-2"></div>
+                <div class="w-2 h-2 bg-zinc-900 rounded-full"></div>
+            </div>
+
+            <!-- Верхняя строка статуса -->
+            <div class="flex justify-between items-center text-[10px] text-white px-2 mt-1 font-semibold opacity-80">
+                <span>09:41</span>
+                <div class="flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 3a1 1 0 011-1h2a1 1 0 011 1v13a1 1 0 01-1 1h-2a1 1 0 01-1-1V3z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M17.778 8.222c-4.296-4.296-11.26-4.296-15.556 0A1 1 0 01.808 6.808c5.076-5.077 13.308-5.077 18.384 0a1 1 0 01-1.414 1.414zM14.95 11.05a7 7 0 00-9.9 0 1 1 0 11-1.414-1.414 9 9 0 0112.728 0 1 1 0 01-1.414 1.414zm-2.829 2.828a3 3 0 00-4.242 0 1 1 0 01-1.415-1.414 5 5 0 017.072 0 1 1 0 01-1.415 1.414zM9 17a1 1 0 112 0 1 1 0 01-2 0z" clip-rule="evenodd"/></svg>
+                </div>
+            </div>
+
+            <!-- Имитация экрана блокировки и самого уведомления -->
+            <div class="flex-grow flex flex-col justify-start pt-12 gap-3 z-10">
+                <!-- Карта уведомления -->
+                <div class="mx-1 p-3.5 bg-black/60 dark:bg-zinc-900/80 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg transition-all transform scale-100 duration-300">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-5 h-5 bg-gradient-to-tr from-violet-500 to-pink-500 rounded-md flex items-center justify-center text-[10px]">
+                                🌸
+                            </div>
+                            <span class="text-[10px] font-bold text-white tracking-wide">FlowerHouse</span>
+                        </div>
+                        <span class="text-[9px] text-white/50 font-medium">сейчас</span>
+                    </div>
+
+                    <h4 class="text-xs font-bold text-white">
+                        @(string.IsNullOrWhiteSpace(_title) ? "Заголовок уведомления" : _title)
+                    </h4>
+                    <p class="text-[10px] text-white/80 leading-normal mt-0.5">
+                        @(string.IsNullOrWhiteSpace(_body) ? "Текст сообщения будет отображен в этой области на смартфонах ваших клиентов..." : _body)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Нижний индикатор Home -->
+            <div class="w-32 h-1 bg-white/40 rounded-full mx-auto mb-1"></div>
+        </div>
+        <span class="text-[10px] text-slate-400 dark:text-zinc-500 font-semibold mt-4 uppercase tracking-wider">Предпросмотр на iOS/Android</span>
+    </div>
+</div>
+
+@code {
+    private string _title = "";
+    private string _body = "";
+    private string? _url;
+    private bool _sending;
+
+    private async Task Send()
+    {
+        var confirm = await DialogHelper.ConfirmAsync("Отправить push-уведомление ВСЕМ подписанным пользователям?");
+        if (confirm != true) return;
+
+        _sending = true; 
+        StateHasChanged();
+        var ok = await PushService.SendBroadcastAsync(new PushSendRequest { Title = _title, Body = _body, Url = _url });
+        _sending = false;
+
+        if (ok)
+        {
+            Snackbar.Add("Уведомление отправлено!", Severity.Success);
+            _title = ""; 
+            _body = ""; 
+            _url = null;
+        }
+        else 
+        {
+            Snackbar.Add("Ошибка отправки", Severity.Error);
+        }
+    }
+}

@@ -1,0 +1,246 @@
+@page "/postcards"
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+
+@inject PostcardService PostcardService
+@inject ISnackbar Snackbar
+@inject DialogHelper DialogHelper
+
+<PageTitle>FlowerHouse — Открытки</PageTitle>
+
+<PageHeader Title="Открытки и шаблоны" Subtitle="Открытки и готовые шаблоны сообщений для букетов">
+    <Actions>
+        @if (_activeTab == 0)
+        {
+            <button @onclick="OpenPostcardDialog" 
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+                <LucideIcon Name="plus" Class="w-4 h-4" />
+                <span>Добавить открытку</span>
+            </button>
+        }
+        else
+        {
+            <button @onclick="OpenTemplateDialog" 
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+                <LucideIcon Name="plus" Class="w-4 h-4" />
+                <span>Добавить шаблон</span>
+            </button>
+        }
+    </Actions>
+</PageHeader>
+
+<div class="flex border-b border-slate-200 dark:border-zinc-800 mb-6 select-none">
+    <button @onclick="() => _activeTab = 0" 
+            class="px-5 py-2.5 text-xs font-semibold border-b-2 -mb-[2px] transition-colors @(_activeTab == 0 ? "border-indigo-600 text-indigo-600 dark:border-violet-400 dark:text-violet-400" : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200")">
+        Открытки
+    </button>
+    <button @onclick="() => _activeTab = 1" 
+            class="px-5 py-2.5 text-xs font-semibold border-b-2 -mb-[2px] transition-colors @(_activeTab == 1 ? "border-indigo-600 text-indigo-600 dark:border-violet-400 dark:text-violet-400" : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200")">
+        Шаблоны сообщений
+    </button>
+</div>
+
+@if (_activeTab == 0)
+{
+    <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+        <UiTable Items="@_postcards" TItem="PostcardDto" IsLoading="@_loading" ShowPagination="false" ColSpan="4">
+            <HeaderTemplate>
+                <th class="p-4">Название</th>
+                <th class="p-4 w-44">Цена</th>
+                <th class="p-4 w-36 text-center">Активна</th>
+                <th class="p-4 w-28 text-center">Действия</th>
+            </HeaderTemplate>
+            <RowTemplate>
+                <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">@context.Name</td>
+                <td class="p-4 font-medium text-slate-500 dark:text-zinc-400">@context.Price.ToString("N0") с.</td>
+                <td class="p-4 text-center">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold @(context.IsActive ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-500/10 text-slate-400")">
+                        @(context.IsActive ? "Да" : "Нет")
+                    </span>
+                </td>
+                <td class="p-4 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                        <button @onclick="() => EditPostcard(context)" 
+                                class="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                            <LucideIcon Name="edit" Class="w-4 h-4" />
+                        </button>
+                        <button @onclick="() => DeletePostcard(context)" 
+                                class="p-1.5 text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                            <LucideIcon Name="trash" Class="w-4 h-4" />
+                        </button>
+                    </div>
+                </td>
+            </RowTemplate>
+        </UiTable>
+    </div>
+}
+else
+{
+    <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+        <UiTable Items="@_templates" TItem="MessageTemplateDto" IsLoading="@_loading" ShowPagination="false" ColSpan="4">
+            <HeaderTemplate>
+                <th class="p-4">Текст шаблона</th>
+                <th class="p-4 w-48">Категория</th>
+                <th class="p-4 w-36 text-center">Активен</th>
+                <th class="p-4 w-28 text-center">Действия</th>
+            </HeaderTemplate>
+            <RowTemplate>
+                <td class="p-4 text-slate-800 dark:text-zinc-200">
+                    <p class="max-w-xl truncate font-medium">@context.Text</p>
+                </td>
+                <td class="p-4">
+                    <span class="px-2 py-1 bg-slate-100 dark:bg-zinc-800 rounded text-slate-600 dark:text-zinc-300 font-medium text-xs">
+                        @(context.Category ?? "—")
+                    </span>
+                </td>
+                <td class="p-4 text-center">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold @(context.IsActive ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-500/10 text-slate-400")">
+                        @(context.IsActive ? "Да" : "Нет")
+                    </span>
+                </td>
+                <td class="p-4 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                        <button @onclick="() => EditTemplate(context)" 
+                                class="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                            <LucideIcon Name="edit" Class="w-4 h-4" />
+                        </button>
+                        <button @onclick="() => DeleteTemplate(context)" 
+                                class="p-1.5 text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                            <LucideIcon Name="trash" Class="w-4 h-4" />
+                        </button>
+                    </div>
+                </td>
+            </RowTemplate>
+        </UiTable>
+    </div>
+}
+
+@* Диалог открытки *@
+<UiModal IsOpen="_pcDialogVisible" Title="@(_editPc != null ? "Редактировать открытку" : "Создать открытку")" OnClose="() => _pcDialogVisible = false">
+    <ChildContent>
+        <div class="space-y-4 pt-2">
+            <MudTextField T="string" @bind-Value="_pcName" Label="Название" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <MudNumericField T="decimal" @bind-Value="_pcPrice" Label="Цена (сомони)" Variant="Variant.Outlined" Min="0" Class="mb-3" />
+            <div class="flex items-center justify-between py-2 border-t border-slate-100 dark:border-zinc-800/50 mt-4">
+                <span class="text-xs font-semibold text-slate-500 dark:text-zinc-400">Активна</span>
+                <MudSwitch T="bool" @bind-Value="_pcActive" Color="Color.Success" />
+            </div>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button @onclick="() => _pcDialogVisible = false" 
+                class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+            Отмена
+        </button>
+        <button @onclick="SavePostcard" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors">
+            Сохранить
+        </button>
+    </FooterContent>
+</UiModal>
+
+@* Диалог шаблона *@
+<UiModal IsOpen="_tplDialogVisible" Title="@(_editTpl != null ? "Редактировать шаблон" : "Создать шаблон")" OnClose="() => _tplDialogVisible = false">
+    <ChildContent>
+        <div class="space-y-4 pt-2">
+            <MudTextField T="string" @bind-Value="_tplText" Label="Текст сообщения" Required="true" Lines="3" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField T="string" @bind-Value="_tplCategory" Label="Категория" Variant="Variant.Outlined" Class="mb-3" />
+            <div class="flex items-center justify-between py-2 border-t border-slate-100 dark:border-zinc-800/50 mt-4">
+                <span class="text-xs font-semibold text-slate-500 dark:text-zinc-400">Активен</span>
+                <MudSwitch T="bool" @bind-Value="_tplActive" Color="Color.Success" />
+            </div>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button @onclick="() => _tplDialogVisible = false" 
+                class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+            Отмена
+        </button>
+        <button @onclick="SaveTemplate" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors">
+            Сохранить
+        </button>
+    </FooterContent>
+</UiModal>
+
+@code {
+    private bool _loading = true;
+    private int _activeTab = 0;
+    private List<PostcardDto> _postcards = [];
+    private List<MessageTemplateDto> _templates = [];
+
+    // Postcard dialog
+    private bool _pcDialogVisible; 
+    private PostcardDto? _editPc;
+    private string _pcName = ""; 
+    private decimal _pcPrice; 
+    private bool _pcActive = true;
+
+    // Template dialog
+    private bool _tplDialogVisible; 
+    private MessageTemplateDto? _editTpl;
+    private string _tplText = ""; 
+    private string? _tplCategory; 
+    private bool _tplActive = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAll();
+
+    private async Task LoadAll()
+    {
+        _loading = true;
+        _postcards = await PostcardService.GetPostcardsAsync() ?? [];
+        _templates = await PostcardService.GetTemplatesAsync() ?? [];
+        _loading = false;
+    }
+
+    private void OpenPostcardDialog() { _editPc = null; _pcName = ""; _pcPrice = 0; _pcActive = true; _pcDialogVisible = true; }
+    private void EditPostcard(PostcardDto p) { _editPc = p; _pcName = p.Name; _pcPrice = p.Price; _pcActive = p.IsActive; _pcDialogVisible = true; }
+
+    private async Task SavePostcard()
+    {
+        if (string.IsNullOrWhiteSpace(_pcName))
+        {
+            Snackbar.Add("Название не может быть пустым", Severity.Warning);
+            return;
+        }
+
+        var req = new PostcardCreateRequest { Name = _pcName, Price = _pcPrice, IsActive = _pcActive };
+        var ok = _editPc != null ? await PostcardService.UpdatePostcardAsync(_editPc.Id, req) : await PostcardService.CreatePostcardAsync(req);
+        Snackbar.Add(ok ? "Сохранено" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        _pcDialogVisible = false;
+        if (ok) await LoadAll();
+    }
+
+    private async Task DeletePostcard(PostcardDto p)
+    {
+        if (!await DialogHelper.ConfirmAsync($"Удалить открытку \"{p.Name}\"?")) return;
+        var ok = await PostcardService.DeletePostcardAsync(p.Id);
+        Snackbar.Add(ok ? "Удалено" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        if (ok) await LoadAll();
+    }
+
+    private void OpenTemplateDialog() { _editTpl = null; _tplText = ""; _tplCategory = ""; _tplActive = true; _tplDialogVisible = true; }
+    private void EditTemplate(MessageTemplateDto t) { _editTpl = t; _tplText = t.Text; _tplCategory = t.Category; _tplActive = t.IsActive; _tplDialogVisible = true; }
+
+    private async Task SaveTemplate()
+    {
+        if (string.IsNullOrWhiteSpace(_tplText))
+        {
+            Snackbar.Add("Текст не может быть пустым", Severity.Warning);
+            return;
+        }
+
+        var req = new MessageTemplateCreateRequest { Text = _tplText, Category = _tplCategory, IsActive = _tplActive };
+        var ok = _editTpl != null ? await PostcardService.UpdateTemplateAsync(_editTpl.Id, req) : await PostcardService.CreateTemplateAsync(req);
+        Snackbar.Add(ok ? "Сохранено" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        _tplDialogVisible = false;
+        if (ok) await LoadAll();
+    }
+
+    private async Task DeleteTemplate(MessageTemplateDto t)
+    {
+        if (!await DialogHelper.ConfirmAsync("Удалить этот шаблон?")) return;
+        var ok = await PostcardService.DeleteTemplateAsync(t.Id);
+        Snackbar.Add(ok ? "Удалено" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        if (ok) await LoadAll();
+    }
+}

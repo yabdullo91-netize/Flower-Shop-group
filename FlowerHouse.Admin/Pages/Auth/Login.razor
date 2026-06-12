@@ -1,0 +1,319 @@
+@page "/login"
+@layout AuthLayout
+
+@inject AuthService AuthService
+@inject JwtAuthStateProvider AuthState
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>FlowerHouse — Вход</PageTitle>
+
+<div class="min-h-screen w-full flex items-center justify-center bg-[#fafafa] dark:bg-[#09090b] p-4 relative overflow-hidden theme-transition">
+    <!-- Glowing background elements for premium feel -->
+    <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-500/10 dark:bg-violet-500/5 blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-500/10 dark:bg-pink-500/5 blur-[120px] pointer-events-none"></div>
+
+    <div class="w-full max-w-md bg-white/80 dark:bg-[#18181b]/80 backdrop-blur-xl border border-slate-200/60 dark:border-zinc-800/60 rounded-2xl shadow-xl shadow-slate-100 dark:shadow-black/40 p-8 relative z-10">
+        @* Логотип *@
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-500 to-pink-500 shadow-md shadow-violet-500/20 mb-4 animate-pulse">
+                <span class="text-2xl">🌸</span>
+            </div>
+            <MudText Typo="Typo.h4" Style="font-weight: 800; letter-spacing: -1px;
+                     background: linear-gradient(135deg, #8B5CF6, #EC4899);
+                     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                     background-clip: text;">
+                FlowerHouse
+            </MudText>
+            <MudText Typo="Typo.body2" Class="text-slate-500 dark:text-zinc-400 mt-1 font-medium">
+                Панель управления
+            </MudText>
+        </div>
+
+        @* Шаг 1: Ввод телефона *@
+        @if (!_otpSent)
+        {
+            <div class="mb-4">
+                <MudText Typo="Typo.body2" Class="text-slate-500 dark:text-zinc-400 text-center mb-6">
+                    Введите номер телефона для входа в ваш административный профиль
+                </MudText>
+            </div>
+
+            <MudForm @ref="_phoneForm" @bind-IsValid="_phoneValid">
+                <MudTextField T="string" @bind-Value="_phone"
+                              Label="Номер телефона" Placeholder="+992 XXX XX XX XX"
+                              Variant="Variant.Outlined" Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Phone"
+                              Required="true" RequiredError="Введите номер телефона"
+                              Validation="@(new Func<string, string?>(ValidatePhone))"
+                              Class="mb-2"
+                              Immediate="true" />
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           FullWidth="true" Class="mt-6 uppercase tracking-wider font-semibold py-3" 
+                           Style="border-radius: 12px; text-transform: none; font-weight: 700; height: 48px; background-color: var(--brand-accent);"
+                           Disabled="@(!_phoneValid || _loading)"
+                           OnClick="SendOtpAsync">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Surface" Class="mr-2" />
+                    }
+                    Получить код
+                </MudButton>
+            </MudForm>
+        }
+        @* Шаг 2: Ввод OTP *@
+        else
+        {
+            <div class="mb-4 text-center">
+                <div class="inline-flex items-center px-3 py-1 rounded-full bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400 text-xs font-semibold mb-4 border border-violet-100 dark:border-violet-900/30">
+                    Код отправлен на @_phone
+                </div>
+            </div>
+
+            <MudForm @ref="_otpForm" @bind-IsValid="_otpValid">
+                <MudTextField T="string" @bind-Value="_otpCode"
+                              Label="Код подтверждения" Placeholder="XXXXXX"
+                              Variant="Variant.Outlined" Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Lock"
+                              Required="true" RequiredError="Введите код"
+                              MaxLength="6" InputType="InputType.Text"
+                              Class="mb-2"
+                              Style="font-size: 20px; letter-spacing: 6px; text-align: center; font-weight: 700;"
+                              Immediate="true" />
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           FullWidth="true" Class="mt-6 uppercase tracking-wider font-semibold py-3"
+                           Style="border-radius: 12px; text-transform: none; font-weight: 700; height: 48px; background-color: var(--brand-accent);"
+                           Disabled="@(!_otpValid || _loading || _otpCode?.Length != 6)"
+                           OnClick="VerifyOtpAsync">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Surface" Class="mr-2" />
+                    }
+                    Войти
+                </MudButton>
+
+                <div class="flex flex-col items-center gap-2 mt-4">
+                    <MudButton Variant="Variant.Text" Color="Color.Primary"
+                               OnClick="ResetForm" Disabled="@_loading" Class="text-xs" Style="text-transform: none;">
+                        ← Изменить номер телефона
+                    </MudButton>
+
+                    @* Таймер повторной отправки *@
+                    @if (_resendTimer > 0)
+                    {
+                        <span class="text-xs text-slate-400 dark:text-zinc-500 font-medium">
+                            Повторный код через <span class="font-bold text-slate-600 dark:text-zinc-300">@_resendTimer</span> сек.
+                        </span>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary"
+                                   OnClick="SendOtpAsync" Disabled="@_loading" Class="text-xs" Style="text-transform: none;">
+                            Отправить код повторно
+                        </MudButton>
+                    }
+                </div>
+            </MudForm>
+        }
+
+        @* Ошибка *@
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="mt-4 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs rounded-xl flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>@_error</span>
+            </div>
+        }
+
+        @* Разделитель *@
+        <div class="relative flex py-5 items-center my-4">
+            <div class="flex-grow border-t border-slate-200 dark:border-zinc-800"></div>
+            <span class="flex-shrink mx-4 text-slate-400 dark:text-zinc-500 text-[10px] uppercase font-bold tracking-widest">ДЕМО-ДОСТУП</span>
+            <div class="flex-grow border-t border-slate-200 dark:border-zinc-800"></div>
+        </div>
+
+        @* Демо-вход без бэкенда *@
+        <div class="grid grid-cols-2 gap-3 mb-2">
+            <button class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 dark:border-zinc-800 hover:border-violet-500/50 dark:hover:border-violet-500/50 bg-white dark:bg-zinc-900 hover:bg-violet-50/20 dark:hover:bg-violet-950/10 text-xs font-semibold text-slate-700 dark:text-zinc-300 transition-all shadow-sm"
+                    @onclick="() => DemoLoginAsync(false)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span>Администратор</span>
+            </button>
+            <button class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 bg-white dark:bg-zinc-900 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 text-xs font-semibold text-slate-700 dark:text-zinc-300 transition-all shadow-sm"
+                    @onclick="() => DemoLoginAsync(true)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span>Супер-админ</span>
+            </button>
+        </div>
+
+        <p class="text-[10px] text-center text-slate-400 dark:text-zinc-500 font-medium mt-3">
+            Демо-доступ позволяет протестировать весь интерфейс без авторизации по SMS
+        </p>
+    </div>
+</div>
+
+@code {
+    private MudForm? _phoneForm;
+    private MudForm? _otpForm;
+
+    private string _phone = "+992";
+    private string? _otpCode;
+    private string? _error;
+
+    private bool _phoneValid;
+    private bool _otpValid;
+    private bool _otpSent;
+    private bool _loading;
+    private int _resendTimer;
+
+    private System.Threading.Timer? _timer;
+
+    private string? ValidatePhone(string phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone)) return "Введите номер";
+        if (!phone.StartsWith("+992")) return "Номер должен начинаться с +992";
+        var digits = new string(phone.Where(char.IsDigit).ToArray());
+        if (digits.Length < 12) return "Номер слишком короткий";
+        return null;
+    }
+
+    private async Task SendOtpAsync()
+    {
+        _error = null;
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await AuthService.SendOtpAsync(new SendOtpRequest { Phone = _phone });
+
+            if (success)
+            {
+                _otpSent = true;
+                _otpCode = null;
+                StartResendTimer();
+                Snackbar.Add("Код отправлен!", Severity.Success);
+            }
+            else
+            {
+                _error = "Не удалось отправить код. Попробуйте позже.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Ошибка: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VerifyOtpAsync()
+    {
+        _error = null;
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await AuthService.VerifyOtpAsync(new VerifyOtpRequest
+            {
+                Phone = _phone,
+                Code = _otpCode ?? ""
+            });
+
+            if (result != null)
+            {
+                // Проверяем роль — только Admin/SuperAdmin
+                if (result.Role is not ("Admin" or "SuperAdmin"))
+                {
+                    _error = "Доступ запрещён. Эта панель только для администраторов.";
+                    _loading = false;
+                    StateHasChanged();
+                    return;
+                }
+
+                await AuthState.MarkUserAsAuthenticated(result.AccessToken, result.RefreshToken);
+                Snackbar.Add($"Добро пожаловать, {result.Name ?? "Админ"}!", Severity.Success);
+                Navigation.NavigateTo("/", forceLoad: false);
+            }
+            else
+            {
+                _error = "Неверный код. Попробуйте снова.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Ошибка: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ResetForm()
+    {
+        _otpSent = false;
+        _otpCode = null;
+        _error = null;
+        _timer?.Dispose();
+        _resendTimer = 0;
+    }
+
+    private void StartResendTimer()
+    {
+        _resendTimer = 60;
+        _timer?.Dispose();
+        _timer = new System.Threading.Timer(async _ =>
+        {
+            if (_resendTimer > 0)
+            {
+                _resendTimer--;
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                _timer?.Dispose();
+            }
+        }, null, 1000, 1000);
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+
+    /// <summary>
+    /// Демо-вход: создаёт JWT без обращения к API (для тестирования UI).
+    /// </summary>
+    private async Task DemoLoginAsync(bool isSuperAdmin)
+    {
+        // Создаём JWT вручную: header.payload.signature (подпись не проверяется на клиенте)
+        // Payload: { "sub": "1", "name": "Demo Admin", "role": "SuperAdmin", "exp": 2099999999 }
+        // Payload regular Admin: { "sub": "2", "name": "Regular Admin", "role": "Admin", "exp": 2099999999 }
+        string demoToken = isSuperAdmin
+            ? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" +
+              ".eyJzdWIiOiIxIiwibmFtZSI6IkRlbW8gQWRtaW4iLCJyb2xlIjoiU3VwZXJBZG1pbiIsImV4cCI6MjA5OTk5OTk5OX0" +
+              ".demo_signature_not_verified_on_client"
+            : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" +
+              ".eyJzdWIiOiIyIiwibmFtZSI6IlJlZ3VsYXIgQWRtaW4iLCJyb2xlIjoiQWRtaW4iLCJleHAiOjIwOTk5OTk5OTl9" +
+              ".demo_signature_not_verified_on_client";
+
+        await AuthState.MarkUserAsAuthenticated(demoToken, "demo_refresh");
+        string roleName = isSuperAdmin ? "SuperAdmin" : "Admin";
+        Snackbar.Add($"Демо-вход выполнен! Роль: {roleName}", Severity.Success);
+        Navigation.NavigateTo("/", forceLoad: false);
+    }
+}

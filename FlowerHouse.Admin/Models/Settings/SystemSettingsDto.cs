@@ -1,0 +1,2 @@
+﻿namespace FlowerHouse.Admin.Models.Settings;
+public class SystemSettingsDto { public string? SmtpHost { get; set; } public int SmtpPort { get; set; } public string? SmtpUser { get; set; } public string? SmtpPassword { get; set; } public bool SmtpUseSsl { get; set; } public string? VapidPublicKey { get; set; } public string? VapidPrivateKey { get; set; } public string? VapidSubject { get; set; } public decimal MinOrderAmount { get; set; } public int BonusPercentage { get; set; } public int BonusTierSilver { get; set; } public int BonusTierGold { get; set; } }
