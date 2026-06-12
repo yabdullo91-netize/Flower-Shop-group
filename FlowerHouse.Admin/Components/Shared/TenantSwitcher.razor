@@ -1,0 +1,72 @@
+﻿@inject ISnackbar Snackbar
+
+<div class="relative">
+    <button @onclick="ToggleDropdown" 
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs text-slate-700 dark:text-zinc-300 font-medium transition-colors select-none">
+        <LucideIcon Name="building" Class="w-3.5 h-3.5 text-zinc-500" />
+        <span class="truncate max-w-[120px] md:max-w-[180px]">@_activeTenantName</span>
+        <LucideIcon Name="chevron-down" Class="@($"w-3.5 h-3.5 text-zinc-500 transition-transform {(_isOpen ? "rotate-180" : "")}")" />
+    </button>
+
+    @if (_isOpen)
+    {
+        <div class="absolute left-0 mt-1.5 w-64 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-xl py-1 z-50 text-slate-700 dark:text-zinc-300 theme-transition">
+            <div class="px-3 py-1.5 text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
+                Организации
+            </div>
+            
+            <div class="flex flex-col max-h-48 overflow-y-auto">
+                @foreach (var tenant in _tenants)
+                {
+                    <button @onclick="() => SwitchTenant(tenant.Id, tenant.Name)" 
+                            class="flex items-center justify-between w-full px-3 py-2 text-left text-xs hover:bg-slate-50 dark:hover:bg-zinc-800 @(_activeTenantId == tenant.Id ? "text-indigo-600 dark:text-indigo-400 font-medium" : "")">
+                        <span class="truncate">@tenant.Name</span>
+                        @if (_activeTenantId == tenant.Id)
+                        {
+                            <LucideIcon Name="check" Class="w-3.5 h-3.5" />
+                        }
+                    </button>
+                }
+            </div>
+
+            <div class="border-t border-slate-100 dark:border-zinc-800 mt-1 pt-1">
+                <a href="settings" class="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-500">
+                    <LucideIcon Name="settings" Class="w-3.5 h-3.5" />
+                    <span>Управление тенантами</span>
+                </a>
+            </div>
+        </div>
+        <div @onclick="CloseDropdown" class="fixed inset-0 z-40"></div>
+    }
+</div>
+
+@code {
+    private bool _isOpen = false;
+    private string _activeTenantName = "FlowerHouse Душанбе";
+    private int _activeTenantId = 1;
+
+    private class Tenant
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    private readonly List<Tenant> _tenants = new()
+    {
+        new Tenant { Id = 1, Name = "FlowerHouse Душанбе" },
+        new Tenant { Id = 2, Name = "FlowerHouse Худжанд" },
+        new Tenant { Id = 3, Name = "FlowerHouse Premium" },
+        new Tenant { Id = 4, Name = "Тестовый склад (ГБАО)" }
+    };
+
+    private void ToggleDropdown() => _isOpen = !_isOpen;
+    private void CloseDropdown() => _isOpen = false;
+
+    private void SwitchTenant(int id, string name)
+    {
+        _activeTenantId = id;
+        _activeTenantName = name;
+        _isOpen = false;
+        Snackbar.Add($"Контекст организации переключен на: {name}", Severity.Info);
+    }
+}

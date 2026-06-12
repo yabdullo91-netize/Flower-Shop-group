@@ -1,0 +1,172 @@
+@page "/promo-codes"
+@attribute [Authorize(Roles = "SuperAdmin")]
+
+@inject PromoCodeService PromoCodeService
+@inject ISnackbar Snackbar
+@inject DialogHelper DialogHelper
+
+<PageTitle>FlowerHouse — Промокоды</PageTitle>
+
+<PageHeader Title="Промокоды" Subtitle="Управление скидочными промокодами для клиентов">
+    <Actions>
+        <button @onclick="OpenCreate" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+            <LucideIcon Name="plus" Class="w-4 h-4" />
+            <span>Создать промокод</span>
+        </button>
+    </Actions>
+</PageHeader>
+
+<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+    <UiTable Items="@_promoCodes" TItem="PromoCodeDto" IsLoading="@_loading" 
+             CurrentPage="@_currentPage" TotalPages="@_totalPages" OnPageChanged="OnPageChanged"
+             ColSpan="7">
+        <HeaderTemplate>
+            <th class="p-4">Код</th>
+            <th class="p-4">Скидка</th>
+            <th class="p-4">Мин. сумма</th>
+            <th class="p-4">Использования</th>
+            <th class="p-4">Истекает</th>
+            <th class="p-4 w-36 text-center">Активен</th>
+            <th class="p-4 w-28 text-center">Действия</th>
+        </HeaderTemplate>
+        <RowTemplate>
+            <td class="p-4">
+                <span class="px-2.5 py-1 bg-slate-100 dark:bg-zinc-800 rounded text-slate-800 dark:text-zinc-200 font-mono font-bold tracking-wider text-xs">
+                    @context.Code
+                </span>
+            </td>
+            <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">
+                @if (context.DiscountType == "Percentage")
+                {
+                    <span>@context.DiscountValue%</span>
+                }
+                else
+                {
+                    <span>@context.DiscountValue.ToString("N0") с.</span>
+                }
+            </td>
+            <td class="p-4 font-medium text-slate-500 dark:text-zinc-400">
+                @(context.MinOrderAmount?.ToString("N0") ?? "—") с.
+            </td>
+            <td class="p-4 font-medium text-slate-500 dark:text-zinc-400">
+                @context.CurrentUsages / @(context.MaxUsages?.ToString() ?? "∞")
+            </td>
+            <td class="p-4 font-medium text-slate-500 dark:text-zinc-400">
+                @(context.ExpiresAt?.ToString("dd.MM.yyyy") ?? "Бессрочно")
+            </td>
+            <td class="p-4 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold @(context.IsActive ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-500/10 text-slate-400")">
+                    @(context.IsActive ? "Да" : "Нет")
+                </span>
+            </td>
+            <td class="p-4 text-center">
+                <div class="flex items-center justify-center gap-1">
+                    <button @onclick="() => OpenEdit(context)" 
+                            class="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                        <LucideIcon Name="edit" Class="w-4 h-4" />
+                    </button>
+                    <button @onclick="() => Delete(context)" 
+                            class="p-1.5 text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                        <LucideIcon Name="trash" Class="w-4 h-4" />
+                    </button>
+                </div>
+            </td>
+        </RowTemplate>
+    </UiTable>
+</div>
+
+<UiModal IsOpen="_dialogVisible" Title="@(_editing != null ? "Редактировать промокод" : "Создать промокод")" OnClose="() => _dialogVisible = false">
+    <ChildContent>
+        <div class="space-y-4 pt-2">
+            <MudTextField T="string" @bind-Value="_code" Label="Код" Required="true" Variant="Variant.Outlined" Style="font-family:monospace;text-transform:uppercase;" Class="mb-3" />
+            <MudSelect T="string" @bind-Value="_discountType" Label="Тип скидки" Variant="Variant.Outlined" Class="mb-3">
+                <MudSelectItem T="string" Value="@("Percentage")">Процент (%)</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Fixed")">Фиксированная (сомони)</MudSelectItem>
+            </MudSelect>
+            <MudNumericField T="decimal" @bind-Value="_discountValue" Label="Значение скидки" Variant="Variant.Outlined" Min="0" Class="mb-3" />
+            <MudNumericField T="decimal?" @bind-Value="_minOrder" Label="Мин. сумма заказа" Variant="Variant.Outlined" Min="0" Class="mb-3" />
+            <MudNumericField T="int?" @bind-Value="_maxUsages" Label="Макс. использований" Variant="Variant.Outlined" Min="1" Class="mb-3" />
+            <MudDatePicker @bind-Date="_expiresAt" Label="Дата истечения" Variant="Variant.Outlined" Clearable="true" Class="mb-3" />
+            
+            <div class="flex items-center justify-between py-2 border-t border-slate-100 dark:border-zinc-800/50 mt-4">
+                <span class="text-xs font-semibold text-slate-500 dark:text-zinc-400">Активен</span>
+                <MudSwitch T="bool" @bind-Value="_isActive" Color="Color.Success" />
+            </div>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button @onclick="() => _dialogVisible = false" 
+                class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+            Отмена
+        </button>
+        <button @onclick="Save" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors">
+            Сохранить
+        </button>
+    </FooterContent>
+</UiModal>
+
+@code {
+    private bool _loading = true;
+    private List<PromoCodeDto> _promoCodes = [];
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+    private const int PageSize = 10;
+
+    private bool _dialogVisible; 
+    private PromoCodeDto? _editing;
+    private string _code = ""; 
+    private string _discountType = "Percentage"; 
+    private decimal _discountValue;
+    private decimal? _minOrder; 
+    private int? _maxUsages; 
+    private DateTime? _expiresAt; 
+    private bool _isActive = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataInternal();
+    }
+
+    private async Task LoadDataInternal()
+    {
+        _loading = true;
+        var r = await PromoCodeService.GetPromoCodesAsync(_currentPage, PageSize);
+        _promoCodes = r?.Items ?? [];
+        _totalPages = r != null ? (int)Math.Ceiling((double)r.TotalCount / PageSize) : 1;
+        _loading = false;
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        _currentPage = page;
+        await LoadDataInternal();
+    }
+
+    private void OpenCreate() { _editing=null; _code=""; _discountType="Percentage"; _discountValue=0; _minOrder=null; _maxUsages=null; _expiresAt=null; _isActive=true; _dialogVisible=true; }
+    private void OpenEdit(PromoCodeDto p) { _editing=p; _code=p.Code; _discountType=p.DiscountType; _discountValue=p.DiscountValue; _minOrder=p.MinOrderAmount; _maxUsages=p.MaxUsages; _expiresAt=p.ExpiresAt; _isActive=p.IsActive; _dialogVisible=true; }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_code))
+        {
+            Snackbar.Add("Код не может быть пустым", Severity.Warning);
+            return;
+        }
+
+        var req = new PromoCodeCreateRequest{Code=_code.ToUpper(),DiscountType=_discountType,DiscountValue=_discountValue,MinOrderAmount=_minOrder,MaxUsages=_maxUsages,ExpiresAt=_expiresAt,IsActive=_isActive};
+        var ok = _editing!=null ? await PromoCodeService.UpdateAsync(_editing.Id,req) : await PromoCodeService.CreateAsync(req);
+        Snackbar.Add(ok?"Сохранено":"Ошибка",ok?Severity.Success:Severity.Error);
+        _dialogVisible=false; 
+        if(ok) await LoadDataInternal();
+    }
+
+    private async Task Delete(PromoCodeDto p)
+    {
+        if (!await DialogHelper.ConfirmAsync($"Удалить промокод \"{p.Code}\"?")) return;
+        var ok = await PromoCodeService.DeleteAsync(p.Id);
+        Snackbar.Add(ok ? "Удалено" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        if (ok) await LoadDataInternal();
+    }
+}

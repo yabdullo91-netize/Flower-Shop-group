@@ -1,0 +1,332 @@
+@page "/products/new"
+@page "/products/{Id:int}/edit"
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+
+@inject ProductService ProductService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>FlowerHouse — @(_isEdit ? "Редактирование" : "Создание") продукта</PageTitle>
+
+<PageHeader Title="@(_isEdit ? "Редактировать продукт" : "Создать продукт")"
+            BreadcrumbItems="@_breadcrumbs" />
+
+@if (_loading)
+{
+    <div class="h-96 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 skeleton"></div>
+}
+else
+{
+    <MudForm @ref="_form" @bind-IsValid="_formValid">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            @* Основная колонка формы (информация, размеры, изображения) *@
+            <div class="lg:col-span-8 space-y-6">
+                @* Основная информация *@
+                <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm theme-transition">
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-zinc-200 mb-6 flex items-center gap-2 select-none">
+                        <LucideIcon Name="info" Class="w-4 h-4 text-indigo-500" />
+                        <span>Основная информация</span>
+                    </h3>
+
+                    <div class="space-y-4">
+                        <MudTextField T="string" @bind-Value="_model.Name" Label="Название букета" Required="true"
+                                      RequiredError="Укажите название" Variant="Variant.Outlined"
+                                      Immediate="true" TextChanged="OnNameChanged" Class="mb-3" />
+
+                        <MudTextField T="string" @bind-Value="_slug" Label="Slug (URL адрес)" Variant="Variant.Outlined"
+                                      HelperText="Автоматически генерируется из названия" Class="mb-3" />
+
+                        <MudTextField T="string" @bind-Value="_model.Description" Label="Описание товара"
+                                      Variant="Variant.Outlined" Lines="4" Class="mb-3" />
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <MudNumericField T="decimal" @bind-Value="_model.Price" Label="Цена по умолчанию (сомони)"
+                                             Required="true" RequiredError="Укажите цену"
+                                             Variant="Variant.Outlined" Min="0" />
+
+                            <MudNumericField T="decimal?" @bind-Value="_model.DiscountPrice" Label="Цена со скидкой (сомони)"
+                                             Variant="Variant.Outlined" Min="0" />
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <MudSelect T="int" @bind-Value="_model.CategoryId" Label="Категория" Variant="Variant.Outlined"
+                                       Required="true" RequiredError="Выберите категорию">
+                                @if (_categories != null)
+                                {
+                                    @foreach (var cat in _categories)
+                                    {
+                                        <MudSelectItem T="int" Value="@cat.Id">@cat.Name</MudSelectItem>
+                                    }
+                                }
+                            </MudSelect>
+
+                            <MudTextField T="string" @bind-Value="_tagsInput" Label="Теги (через запятую)"
+                                          Variant="Variant.Outlined"
+                                          HelperText="Например: розы, день рождения, премиум" />
+                        </div>
+                    </div>
+                </div>
+
+                @* Варианты размеров *@
+                <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm theme-transition">
+                    <div class="flex items-center justify-between mb-6 select-none">
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                            <LucideIcon Name="sliders" Class="w-4 h-4 text-indigo-500" />
+                            <span>Размерные варианты (опционально)</span>
+                        </h3>
+                        <button @onclick="AddSize" type="button"
+                                class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800 dark:hover:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700/50 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 transition-colors flex items-center gap-1">
+                            <LucideIcon Name="plus" Class="w-3.5 h-3.5" />
+                            <span>Добавить</span>
+                        </button>
+                    </div>
+
+                    @if (_sizes.Count == 0)
+                    {
+                        <p class="text-xs text-slate-400 dark:text-zinc-500 font-medium py-2">
+                            Специфические размеры не добавлены (будет доступен только один стандартный размер).
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="space-y-3">
+                            @foreach (var (size, idx) in _sizes.Select((s, i) => (s, i)))
+                            {
+                                var localIdx = idx;
+                                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end p-3 bg-slate-50/50 dark:bg-zinc-950/20 border border-slate-100 dark:border-zinc-800/40 rounded-xl">
+                                    <div class="sm:col-span-6">
+                                        <MudTextField T="string" @bind-Value="size.Name" Label="Название (например: XL)" Variant="Variant.Outlined" Dense="true" />
+                                    </div>
+                                    <div class="sm:col-span-4">
+                                        <MudNumericField T="decimal" @bind-Value="size.Price" Label="Цена (сомони)" Variant="Variant.Outlined" Dense="true" Min="0" />
+                                    </div>
+                                    <div class="sm:col-span-2 flex justify-end">
+                                        <button @onclick="() => _sizes.RemoveAt(localIdx)" type="button"
+                                                class="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
+                                            <LucideIcon Name="trash" Class="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @* Изображения *@
+                <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm theme-transition">
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-zinc-200 mb-6 flex items-center gap-2 select-none">
+                        <LucideIcon Name="image" Class="w-4 h-4 text-indigo-500" />
+                        <span>Галерея изображений</span>
+                    </h3>
+                    <ImageUpload MaxFiles="8" OnFilesSelected="OnFilesSelected"
+                                 ExistingImages="@_existingImages"
+                                 OnDeleteExisting="DeleteExistingImage" />
+                </div>
+            </div>
+
+            @* Правая колонка: Настройки статуса и свойств продукта *@
+            <div class="lg:col-span-4 space-y-6">
+                @* Параметры доступности *@
+                <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm theme-transition">
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-zinc-200 mb-4 flex items-center gap-2 select-none">
+                        <LucideIcon Name="settings" Class="w-4 h-4 text-indigo-500" />
+                        <span>Параметры и видимость</span>
+                    </h3>
+
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-zinc-800/40">
+                            <div class="flex flex-col">
+                                <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Активен</span>
+                                <span class="text-[9px] text-slate-400 dark:text-zinc-500">Доступен для заказа на сайте</span>
+                            </div>
+                            <MudSwitch T="bool" @bind-Value="_model.IsActive" Color="Color.Success" />
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-zinc-800/40">
+                            <div class="flex flex-col">
+                                <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Доставка сегодня</span>
+                                <span class="text-[9px] text-slate-400 dark:text-zinc-500">Возможна экспресс-доставка</span>
+                            </div>
+                            <MudSwitch T="bool" @bind-Value="_model.DeliverToday" Color="Color.Primary" />
+                        </div>
+
+                        <MudSelect T="string" @bind-Value="_model.Occasion" Label="Повод" Variant="Variant.Outlined"
+                                   Clearable="true" Class="mt-4">
+                            <MudSelectItem T="string" Value="@("birthday")">День рождения</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("wedding")">Свадьба</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("anniversary")">Годовщина</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("holiday")">Праздник</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("condolence")">Соболезнование</MudSelectItem>
+                        </MudSelect>
+
+                        <MudSelect T="string" @bind-Value="_model.Kind" Label="Тип букета" Variant="Variant.Outlined"
+                                   Clearable="true" Class="mt-3">
+                            <MudSelectItem T="string" Value="@("bouquet")">Букет</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("box")">В коробке</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("basket")">В корзине</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("single")">Поштучно</MudSelectItem>
+                        </MudSelect>
+
+                        <MudSelect T="string" @bind-Value="_model.Packaging" Label="Тип упаковки" Variant="Variant.Outlined"
+                                   Clearable="true" Class="mt-3">
+                            <MudSelectItem T="string" Value="@("paper")">Крафт-бумага</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("film")">Плёнка</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("box")">Подарочная коробка</MudSelectItem>
+                        </MudSelect>
+                    </div>
+                </div>
+
+                @* Сохранение формы *@
+                <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm theme-transition space-y-3">
+                    <button type="button" @onclick="SaveAsync" disabled="@(!_formValid || _saving)"
+                            class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-1.5 h-12">
+                        @if (_saving)
+                        {
+                            <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        }
+                        else
+                        {
+                            <LucideIcon Name="save" Class="w-4 h-4" />
+                        }
+                        <span>@(_isEdit ? "Сохранить изменения" : "Создать продукт")</span>
+                    </button>
+                    <a href="/products" 
+                       class="w-full py-3 bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800 dark:hover:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700/50 text-slate-700 dark:text-zinc-300 rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center justify-center h-12 select-none">
+                        Отмена
+                    </a>
+                </div>
+            </div>
+        </div>
+    </MudForm>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private bool _isEdit => Id.HasValue;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _formValid;
+    private MudForm? _form;
+
+    private ProductCreateRequest _model = new();
+    private string _slug = "";
+    private string _tagsInput = "";
+    private List<ProductSizeDto> _sizes = [];
+    private List<IBrowserFile> _newFiles = [];
+    private List<ImageUpload.ExistingImageInfo>? _existingImages;
+    private List<CategoryDto>? _categories;
+
+    private List<BreadcrumbItem> _breadcrumbs = [
+        new("Продукты", "/products", icon: Icons.Material.Filled.LocalFlorist),
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await ProductService.GetCategoriesAsync();
+
+        if (_isEdit)
+        {
+            _breadcrumbs.Add(new("Редактирование", null, true));
+            var product = await ProductService.GetProductAsync(Id!.Value);
+            if (product != null)
+            {
+                _model = new ProductCreateRequest
+                {
+                    Name = product.Name,
+                    Description = product.Description,
+                    Price = product.Price,
+                    DiscountPrice = product.DiscountPrice,
+                    CategoryId = product.CategoryId,
+                    Tags = product.Tags ?? [],
+                    IsActive = product.IsActive,
+                    DeliverToday = product.DeliverToday,
+                    Occasion = product.Occasion,
+                    Kind = product.Kind,
+                    Packaging = product.Packaging,
+                    Sizes = product.Sizes
+                };
+                _slug = product.Slug;
+                _tagsInput = string.Join(", ", product.Tags ?? []);
+                _sizes = product.Sizes?.ToList() ?? [];
+                _existingImages = product.Images?.Select(i => new ImageUpload.ExistingImageInfo { Id = i.Id, Url = i.Url }).ToList();
+            }
+        }
+        else
+        {
+            _breadcrumbs.Add(new("Создание", null, true));
+            _model.IsActive = true;
+        }
+
+        _loading = false;
+    }
+
+    private void OnNameChanged(string name)
+    {
+        _slug = Transliterate(name);
+    }
+
+    private void AddSize() => _sizes.Add(new ProductSizeDto { Name = "", Price = 0 });
+
+    private void OnFilesSelected(List<IBrowserFile> files) => _newFiles = files;
+
+    private async Task DeleteExistingImage(int imageId)
+    {
+        if (_isEdit)
+        {
+            await ProductService.DeleteImageAsync(Id!.Value, imageId);
+            _existingImages?.RemoveAll(i => i.Id == imageId);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        _model.Tags = _tagsInput.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+        _model.Sizes = _sizes.Count > 0 ? _sizes : null;
+
+        bool ok;
+        int productId;
+
+        if (_isEdit)
+        {
+            ok = await ProductService.UpdateProductAsync(Id!.Value, _model);
+            productId = Id!.Value;
+        }
+        else
+        {
+            var created = await ProductService.CreateProductAsync(_model);
+            ok = created != null;
+            productId = created?.Id ?? 0;
+        }
+
+        if (ok && _newFiles.Count > 0 && productId > 0)
+        {
+            var content = new MultipartFormDataContent();
+            foreach (var file in _newFiles)
+            {
+                var stream = file.OpenReadStream(5 * 1024 * 1024);
+                content.Add(new StreamContent(stream), "files", file.Name);
+            }
+            await ProductService.UploadImagesAsync(productId, content);
+        }
+
+        _saving = false;
+        Snackbar.Add(ok ? "Продукт успешно сохранён" : "Ошибка сохранения", ok ? Severity.Success : Severity.Error);
+        if (ok) Navigation.NavigateTo("/products");
+    }
+
+    private static string Transliterate(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        var result = text.ToLower().Trim()
+            .Replace("а", "a").Replace("б", "b").Replace("в", "v").Replace("г", "g").Replace("д", "d")
+            .Replace("е", "e").Replace("ё", "yo").Replace("ж", "zh").Replace("з", "z").Replace("и", "i")
+            .Replace("й", "y").Replace("к", "k").Replace("л", "l").Replace("м", "m").Replace("н", "n")
+            .Replace("о", "o").Replace("п", "p").Replace("р", "r").Replace("с", "s").Replace("т", "t")
+            .Replace("у", "u").Replace("ф", "f").Replace("х", "kh").Replace("ц", "ts").Replace("ч", "ch")
+            .Replace("ш", "sh").Replace("щ", "shch").Replace("ъ", "").Replace("ы", "y").Replace("ь", "")
+            .Replace("э", "e").Replace("ю", "yu").Replace("я", "ya").Replace(" ", "-");
+        return System.Text.RegularExpressions.Regex.Replace(result, @"[^a-z0-9\-]", "");
+    }
+}

@@ -1,0 +1,34 @@
+﻿@* Цветной бейдж статуса заказа *@
+
+<MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+         Color="@GetColor()" Class="status-badge">
+    @GetLabel()
+</MudChip>
+
+@code {
+    [Parameter] public string Status { get; set; } = "";
+
+    private Color GetColor() => Status?.ToLower() switch
+    {
+        "new" or "новый" or "принят" => Color.Info,
+        "confirmed" or "подтверждён" => Color.Primary,
+        "assembling" or "собирается" => Color.Warning,
+        "ready" or "готов" or "фото готово" => Color.Secondary,
+        "delivering" or "доставляется" => Color.Primary,
+        "delivered" or "доставлен" => Color.Success,
+        "cancelled" or "отменён" => Color.Error,
+        _ => Color.Default
+    };
+
+    private string GetLabel() => Status?.ToLower() switch
+    {
+        "new" => "Новый",
+        "confirmed" => "Подтверждён",
+        "assembling" => "Собирается",
+        "ready" => "Фото готово",
+        "delivering" => "Доставляется",
+        "delivered" => "Доставлен",
+        "cancelled" => "Отменён",
+        _ => Status ?? "—"
+    };
+}

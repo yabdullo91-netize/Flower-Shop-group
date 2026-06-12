@@ -1,0 +1,244 @@
+﻿@page "/orders"
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+
+@inject OrderService OrderService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>FlowerHouse — Заказы</PageTitle>
+
+@* --- Header --- *@
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 select-none">
+    <div>
+        <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">Управление заказами</h1>
+        <p class="text-xs text-slate-500 dark:text-zinc-400">Просмотр, фильтрация и обновление статусов заказов покупателей</p>
+    </div>
+    
+    <div class="flex gap-2 shrink-0">
+        <button @onclick="RefreshAsync" 
+                class="px-3 py-1.5 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-lg text-xs font-semibold hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5">
+            <LucideIcon Name="sun" Class="w-3.5 h-3.5" />
+            <span>Обновить</span>
+        </button>
+    </div>
+</div>
+
+@* --- Фильтры --- *@
+<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm mb-6 flex flex-col gap-4 theme-transition">
+    @* Статусы (Notion/Linear Chips) *@
+    <div>
+        <label class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block mb-2 select-none">
+            Статус заказа
+        </label>
+        <div class="flex flex-wrap gap-1.5">
+            @foreach (var tab in _statusTabs)
+            {
+                <button @onclick="() => FilterByStatus(tab.Value)" 
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all select-none
+                               @( _selectedStatus == tab.Value 
+                                  ? "bg-indigo-600 border-indigo-600 text-white shadow-sm" 
+                                  : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:border-slate-300 dark:hover:border-zinc-700" )">
+                    @tab.Label
+                </button>
+            }
+        </div>
+    </div>
+
+    @* Поиск и Дата *@
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        @* Поиск *@
+        <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-slate-500 dark:text-zinc-400 select-none">Поиск</label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 dark:text-zinc-500">
+                    <LucideIcon Name="search" Class="w-4 h-4" />
+                </span>
+                <input type="text" @bind="_searchText" @bind:event="oninput" @onkeyup="OnSearchKeyUp" placeholder="Номер, имя или телефон..."
+                       class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg outline-none text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:border-indigo-500 transition-colors" />
+            </div>
+        </div>
+
+        @* Дата С *@
+        <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-slate-500 dark:text-zinc-400 select-none">Дата доставки С</label>
+            <input type="date" @bind="_fromDate"
+                   class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg outline-none text-slate-900 dark:text-zinc-100 transition-colors" />
+        </div>
+
+        @* Кнопка очистки *@
+        <div class="flex gap-2">
+            <button @onclick="ApplyFiltersAsync" 
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-1.5 h-9 flex-1">
+                <span>Применить фильтры</span>
+            </button>
+            <button @onclick="ClearFiltersAsync" 
+                    class="px-3 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors h-9">
+                Сбросить
+            </button>
+        </div>
+    </div>
+</div>
+
+@* --- Таблица заказов --- *@
+<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+    <UiTable Items="@_orders" TItem="OrderDto" 
+             IsLoading="@_loading" 
+             CurrentPage="@_currentPage" 
+             TotalPages="@_totalPages" 
+             OnPageChanged="OnPageChangedAsync"
+             ColSpan="6">
+        <HeaderTemplate>
+            <th class="p-4 w-28">№ Заказа</th>
+            <th class="p-4">Клиент</th>
+            <th class="p-4 w-32">Сумма</th>
+            <th class="p-4 w-36">Статус</th>
+            <th class="p-4 w-36">Дата создания</th>
+            <th class="p-4 w-44">Дата доставки</th>
+        </HeaderTemplate>
+        <RowTemplate>
+            <td class="p-4 font-semibold text-indigo-600 dark:text-indigo-400">
+                <a href="orders/@context.Id">@context.OrderNumber</a>
+            </td>
+            <td class="p-4">
+                <div class="font-medium text-slate-800 dark:text-zinc-200">@context.CustomerName</div>
+                <div class="text-[10px] text-slate-400 dark:text-zinc-500">@context.CustomerPhone</div>
+            </td>
+            <td class="p-4 font-bold text-slate-900 dark:text-zinc-100">
+                @context.Total.ToString("N0") с.
+            </td>
+            <td class="p-4">
+                <StatusBadge Status="@context.Status" />
+            </td>
+            <td class="p-4">
+                <div class="text-slate-800 dark:text-zinc-200">@context.CreatedAt.ToString("dd.MM.yyyy")</div>
+                <div class="text-[10px] text-slate-400 dark:text-zinc-500">@context.CreatedAt.ToString("HH:mm")</div>
+            </td>
+            <td class="p-4">
+                @if (context.DeliveryDate.HasValue)
+                {
+                    <div class="text-slate-800 dark:text-zinc-200">@context.DeliveryDate.Value.ToString("dd.MM.yyyy")</div>
+                    @if (!string.IsNullOrEmpty(context.DeliveryTimeSlot))
+                    {
+                        <div class="text-[10px] text-zinc-400 truncate">@context.DeliveryTimeSlot</div>
+                    }
+                }
+                else
+                {
+                    <span class="text-slate-300 dark:text-zinc-600">—</span>
+                }
+            </td>
+        </RowTemplate>
+    </UiTable>
+</div>
+
+@code {
+    private bool _loading = true;
+    private string _searchText = "";
+    private string _selectedStatus = "";
+    private DateTime? _fromDate;
+    private DateTime? _toDate; // Optional, using fromDate as delivery date
+
+    private int _currentPage = 1;
+    private int _pageSize = 15;
+    private int _totalPages = 1;
+
+    private List<OrderDto> _orders = new();
+
+    private class StatusTab
+    {
+        public string Value { get; set; } = "";
+        public string Label { get; set; } = "";
+    }
+
+    private readonly List<StatusTab> _statusTabs = new()
+    {
+        new() { Value = "", Label = "Все" },
+        new() { Value = "new", Label = "Новые" },
+        new() { Value = "confirmed", Label = "Подтвержденные" },
+        new() { Value = "assembling", Label = "Собираются" },
+        new() { Value = "delivering", Label = "Доставляются" },
+        new() { Value = "delivered", Label = "Доставленные" },
+        new() { Value = "cancelled", Label = "Отмененные" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrdersAsync();
+    }
+
+    private async Task LoadOrdersAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+        try
+        {
+            var result = await OrderService.GetOrdersAsync(
+                page: _currentPage,
+                pageSize: _pageSize,
+                search: string.IsNullOrWhiteSpace(_searchText) ? null : _searchText,
+                status: string.IsNullOrWhiteSpace(_selectedStatus) ? null : _selectedStatus,
+                from: _fromDate,
+                to: _toDate);
+
+            if (result != null)
+            {
+                _orders = result.Items ?? new();
+                _totalPages = (int)Math.Ceiling((double)result.TotalCount / _pageSize);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка загрузки заказов: {ex.Message}", Severity.Error);
+            _orders = new();
+            _totalPages = 1;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task FilterByStatus(string status)
+    {
+        _selectedStatus = status;
+        _currentPage = 1;
+        await LoadOrdersAsync();
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _currentPage = 1;
+            await LoadOrdersAsync();
+        }
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        _currentPage = 1;
+        await LoadOrdersAsync();
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        _searchText = "";
+        _selectedStatus = "";
+        _fromDate = null;
+        _toDate = null;
+        _currentPage = 1;
+        await LoadOrdersAsync();
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        _currentPage = page;
+        await LoadOrdersAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadOrdersAsync();
+    }
+}

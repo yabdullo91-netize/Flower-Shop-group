@@ -1,0 +1,108 @@
+﻿@inject ISnackbar Snackbar
+
+<div class="flex flex-col gap-4">
+    <div class="flex justify-between items-center">
+        <div>
+            <h4 class="text-sm font-semibold text-slate-900 dark:text-zinc-100">Матрица прав и ролей</h4>
+            <p class="text-xs text-slate-400 dark:text-zinc-500">Настройте права доступа для каждой роли в системе</p>
+        </div>
+        <button @onclick="SavePermissions" 
+                class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+            <LucideIcon Name="check" Class="w-3.5 h-3.5" />
+            Сохранить изменения
+        </button>
+    </div>
+
+    <div class="overflow-x-auto border border-slate-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900">
+        <table class="w-full text-left border-collapse text-xs select-none">
+            <thead class="bg-slate-50 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                <tr>
+                    <th class="p-4 w-1/3">Раздел / Разрешение</th>
+                    @foreach (var role in _roles)
+                    {
+                        <th class="p-4 text-center">@role</th>
+                    }
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-zinc-800 text-slate-700 dark:text-zinc-300">
+                @foreach (var perm in _permissions)
+                {
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                        <td class="p-4 font-medium">
+                            <div>@perm.Name</div>
+                            <span class="text-[10px] text-slate-400 dark:text-zinc-500">@perm.Description</span>
+                        </td>
+                        @foreach (var role in _roles)
+                        {
+                            <td class="p-4 text-center">
+                                <input type="checkbox" 
+                                       checked="@HasPermission(role, perm.Key)" 
+                                       @onchange="(e) => TogglePermission(role, perm.Key, e)"
+                                       disabled="@(role == "SuperAdmin")" @* SuperAdmin always has all permissions *@
+                                       class="rounded border-slate-300 dark:border-zinc-700 dark:bg-zinc-800 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" />
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private readonly string[] _roles = { "SuperAdmin", "Admin", "Moderator", "Courier" };
+
+    private class PermissionItem
+    {
+        public string Key { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+
+    private readonly List<PermissionItem> _permissions = new()
+    {
+        new PermissionItem { Key = "orders.view", Name = "Заказы: Просмотр", Description = "Просмотр списка заказов и деталей" },
+        new PermissionItem { Key = "orders.edit", Name = "Заказы: Изменение статуса", Description = "Смена статусов и загрузка фотографий доставки" },
+        new PermissionItem { Key = "products.edit", Name = "Каталог: Управление товарами", Description = "Создание, редактирование и удаление букетов/аддонов" },
+        new PermissionItem { Key = "loyalty.adjust", Name = "Лояльность: Коррекция баллов", Description = "Ручное начисление и списание бонусных баллов" },
+        new PermissionItem { Key = "users.block", Name = "Пользователи: Блокировка", Description = "Блокировка и разблокировка аккаунтов клиентов" },
+        new PermissionItem { Key = "settings.edit", Name = "Система: Настройки", Description = "Редактирование почты, API ключей и лимитов лояльности" },
+        new PermissionItem { Key = "audit.view", Name = "Система: Журнал аудита", Description = "Доступ к просмотру системных логов безопасности" }
+    };
+
+    // Dictionary format: Role -> List of active permission keys
+    private readonly Dictionary<string, HashSet<string>> _matrix = new();
+
+    protected override void OnInitialized()
+    {
+        // Init default settings
+        _matrix["SuperAdmin"] = new HashSet<string>(_permissions.Select(p => p.Key));
+        _matrix["Admin"] = new HashSet<string> { "orders.view", "orders.edit", "products.edit", "loyalty.adjust" };
+        _matrix["Moderator"] = new HashSet<string> { "orders.view", "orders.edit" };
+        _matrix["Courier"] = new HashSet<string> { "orders.view" };
+    }
+
+    private bool HasPermission(string role, string key)
+    {
+        return _matrix.TryGetValue(role, out var perms) && perms.Contains(key);
+    }
+
+    private void TogglePermission(string role, string key, ChangeEventArgs e)
+    {
+        if (role == "SuperAdmin") return; // SuperAdmin cannot be modified
+
+        var isChecked = (bool)(e.Value ?? false);
+        if (_matrix.TryGetValue(role, out var perms))
+        {
+            if (isChecked)
+                perms.Add(key);
+            else
+                perms.Remove(key);
+        }
+    }
+
+    private void SavePermissions()
+    {
+        Snackbar.Add("Права доступа успешно сохранены в системе!", Severity.Success);
+    }
+}

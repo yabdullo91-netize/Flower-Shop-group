@@ -1,0 +1,135 @@
+﻿@typeparam TItem
+
+<div class="overflow-x-auto w-full border border-gray-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 theme-transition">
+    <table class="w-full text-left border-collapse text-xs">
+        <thead class="bg-slate-50 dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider select-none">
+            <tr>
+                @if (ShowSelection)
+                {
+                    <th class="p-4 w-12 text-center">
+                        <input type="checkbox" checked="@_allSelected" @onchange="ToggleSelectAll" class="rounded border-gray-300 dark:border-zinc-700 dark:bg-zinc-800 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                    </th>
+                }
+                @HeaderTemplate
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-zinc-800 text-slate-700 dark:text-zinc-300">
+            @if (IsLoading)
+            {
+                @for (int i = 0; i < SkeletonRows; i++)
+                {
+                    <tr>
+                        @if (ShowSelection)
+                        {
+                            <td class="p-4 text-center">
+                                <div class="h-4 w-4 bg-slate-200 dark:bg-zinc-800 rounded skeleton mx-auto"></div>
+                            </td>
+                        }
+                        @SkeletonTemplate
+                    </tr>
+                }
+            }
+            else if (Items == null || !Items.Any())
+            {
+                <tr>
+                    <td colspan="@ColSpan" class="p-8 text-center text-slate-400 dark:text-zinc-500 font-medium">
+                        Нет данных для отображения
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Items)
+                {
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors duration-150">
+                        @if (ShowSelection)
+                        {
+                            <td class="p-4 text-center">
+                                <input type="checkbox" checked="@IsSelected(item)" @onchange="() => ToggleSelect(item)" class="rounded border-gray-300 dark:border-zinc-700 dark:bg-zinc-800 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                            </td>
+                        }
+                        @RowTemplate(item)
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    @if (ShowPagination && TotalPages > 1)
+    {
+        <div class="flex items-center justify-between px-6 py-3 border-t border-gray-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 text-xs select-none">
+            <span class="text-slate-500 dark:text-zinc-400">
+                Страница <strong>@CurrentPage</strong> из <strong>@TotalPages</strong>
+            </span>
+            <div class="flex items-center gap-2">
+                <button @onclick="PrevPage" disabled="@(CurrentPage <= 1)" class="flex items-center gap-1 px-3 py-1.5 border border-gray-200 dark:border-zinc-800 rounded-md bg-white dark:bg-zinc-900 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-medium transition-colors">
+                    <LucideIcon Name="chevron-left" Class="w-3.5 h-3.5" />
+                    <span>Назад</span>
+                </button>
+                <button @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)" class="flex items-center gap-1 px-3 py-1.5 border border-gray-200 dark:border-zinc-800 rounded-md bg-white dark:bg-zinc-900 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-medium transition-colors">
+                    <span>Вперед</span>
+                    <LucideIcon Name="chevron-right" Class="w-3.5 h-3.5" />
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter] public RenderFragment? HeaderTemplate { get; set; }
+    [Parameter] public RenderFragment<TItem>? RowTemplate { get; set; }
+    [Parameter] public RenderFragment? SkeletonTemplate { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public int SkeletonRows { get; set; } = 5;
+    [Parameter] public int ColSpan { get; set; } = 5;
+    [Parameter] public bool ShowSelection { get; set; } = false;
+    [Parameter] public bool ShowPagination { get; set; } = true;
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; } = 1;
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+    [Parameter] public EventCallback<List<TItem>> OnSelectionChanged { get; set; }
+
+    private List<TItem> _selectedItems = [];
+    private bool _allSelected = false;
+
+    private bool IsSelected(TItem item) => _selectedItems.Contains(item);
+
+    private async Task ToggleSelect(TItem item)
+    {
+        if (_selectedItems.Contains(item))
+            _selectedItems.Remove(item);
+        else
+            _selectedItems.Add(item);
+
+        _allSelected = Items != null && Items.All(x => _selectedItems.Contains(x));
+        await OnSelectionChanged.InvokeAsync(_selectedItems);
+    }
+
+    private async Task ToggleSelectAll(ChangeEventArgs e)
+    {
+        _allSelected = (bool)(e.Value ?? false);
+        _selectedItems.Clear();
+        if (_allSelected && Items != null)
+        {
+            _selectedItems.AddRange(Items);
+        }
+        await OnSelectionChanged.InvokeAsync(_selectedItems);
+    }
+
+    private async Task PrevPage()
+    {
+        if (CurrentPage > 1)
+        {
+            await OnPageChanged.InvokeAsync(CurrentPage - 1);
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            await OnPageChanged.InvokeAsync(CurrentPage + 1);
+        }
+    }
+}

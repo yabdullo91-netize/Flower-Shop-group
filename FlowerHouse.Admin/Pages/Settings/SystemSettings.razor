@@ -1,0 +1,157 @@
+@page "/settings"
+@attribute [Authorize(Roles = "SuperAdmin")]
+
+@inject SettingsService SettingsService
+@inject ISnackbar Snackbar
+
+<PageTitle>FlowerHouse — Настройки</PageTitle>
+
+<PageHeader Title="Настройки системы" Subtitle="Конфигурация почтового SMTP, Push-уведомлений, лимитов заказов и программы лояльности" />
+
+@if (_loading)
+{
+    <div class="h-64 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 flex flex-col justify-between skeleton"></div>
+}
+else if (_settings != null)
+{
+    <div class="flex flex-col md:flex-row gap-8 items-start">
+        @* Левое навигационное меню настроек *@
+        <div class="w-full md:w-60 shrink-0 flex flex-col gap-1 select-none">
+            <button @onclick="() => _activeTab = 0" 
+                    class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all @(_activeTab == 0 ? "bg-indigo-500/10 text-indigo-600 dark:text-violet-400" : "text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800/50")">
+                <LucideIcon Name="mail" Class="w-4 h-4" />
+                <span>SMTP (Почта)</span>
+            </button>
+            <button @onclick="() => _activeTab = 1" 
+                    class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all @(_activeTab == 1 ? "bg-indigo-500/10 text-indigo-600 dark:text-violet-400" : "text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800/50")">
+                <LucideIcon Name="bell" Class="w-4 h-4" />
+                <span>Push (VAPID)</span>
+            </button>
+            <button @onclick="() => _activeTab = 2" 
+                    class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all @(_activeTab == 2 ? "bg-indigo-500/10 text-indigo-600 dark:text-violet-400" : "text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800/50")">
+                <LucideIcon Name="shopping-cart" Class="w-4 h-4" />
+                <span>Настройки заказов</span>
+            </button>
+            <button @onclick="() => _activeTab = 3" 
+                    class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all @(_activeTab == 3 ? "bg-indigo-500/10 text-indigo-600 dark:text-violet-400" : "text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800/50")">
+                <LucideIcon Name="star" Class="w-4 h-4" />
+                <span>Бонусная программа</span>
+            </button>
+        </div>
+
+        @* Правая карточка с активным разделом *@
+        <div class="flex-grow w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm theme-transition">
+            @if (_activeTab == 0)
+            {
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-zinc-200 mb-5 flex items-center gap-2">
+                        <LucideIcon Name="mail" Class="w-4 h-4 text-indigo-500" />
+                        <span>Настройки почтового сервера (SMTP)</span>
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                        <div class="sm:col-span-2">
+                            <MudTextField T="string" @bind-Value="_settings.SmtpHost" Label="SMTP Хост" Variant="Variant.Outlined" Class="mb-3" />
+                        </div>
+                        <div>
+                            <MudNumericField T="int" @bind-Value="_settings.SmtpPort" Label="Порт" Variant="Variant.Outlined" Class="mb-3" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <MudTextField T="string" @bind-Value="_settings.SmtpUser" Label="Имя пользователя" Variant="Variant.Outlined" Class="mb-3" />
+                        <MudTextField T="string" @bind-Value="_settings.SmtpPassword" Label="Пароль" InputType="InputType.Password" Variant="Variant.Outlined" Class="mb-3" />
+                    </div>
+
+                    <div class="flex items-center justify-between py-3 border-t border-slate-100 dark:border-zinc-800/60 mt-4">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Использовать SSL</span>
+                            <span class="text-[10px] text-slate-400 dark:text-zinc-500">Безопасное шифрование соединений</span>
+                        </div>
+                        <MudSwitch T="bool" @bind-Value="_settings.SmtpUseSsl" Color="Color.Success" />
+                    </div>
+                </div>
+            }
+            else if (_activeTab == 1)
+            {
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-zinc-200 mb-5 flex items-center gap-2">
+                        <LucideIcon Name="bell" Class="w-4 h-4 text-indigo-500" />
+                        <span>VAPID ключи для Push-уведомлений</span>
+                    </h3>
+
+                    <div class="space-y-4">
+                        <MudTextField T="string" @bind-Value="_settings.VapidPublicKey" Label="Публичный ключ (Public Key)" Variant="Variant.Outlined" Class="mb-3" />
+                        <MudTextField T="string" @bind-Value="_settings.VapidPrivateKey" Label="Приватный ключ (Private Key)" InputType="InputType.Password" Variant="Variant.Outlined" Class="mb-3" />
+                        <MudTextField T="string" @bind-Value="_settings.VapidSubject" Label="Тема отправителя (mailto:...)" Variant="Variant.Outlined" Class="mb-3" />
+                    </div>
+                </div>
+            }
+            else if (_activeTab == 2)
+            {
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-zinc-200 mb-5 flex items-center gap-2">
+                        <LucideIcon Name="shopping-cart" Class="w-4 h-4 text-indigo-500" />
+                        <span>Минимальный лимит заказа</span>
+                    </h3>
+
+                    <div class="max-w-xs">
+                        <MudNumericField T="decimal" @bind-Value="_settings.MinOrderAmount" Label="Минимальная сумма заказа (сомони)" Variant="Variant.Outlined" Min="0" />
+                    </div>
+                </div>
+            }
+            else if (_activeTab == 3)
+            {
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-zinc-200 mb-5 flex items-center gap-2">
+                        <LucideIcon Name="star" Class="w-4 h-4 text-indigo-500" />
+                        <span>Параметры программы лояльности</span>
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <MudNumericField T="int" @bind-Value="_settings.BonusPercentage" Label="Начисление бонусов (%)" Variant="Variant.Outlined" Min="0" Max="100" />
+                        <MudNumericField T="int" @bind-Value="_settings.BonusTierSilver" Label="Порог уровня Silver (баллы)" Variant="Variant.Outlined" Min="0" />
+                        <MudNumericField T="int" @bind-Value="_settings.BonusTierGold" Label="Порог уровня Gold (баллы)" Variant="Variant.Outlined" Min="0" />
+                    </div>
+                </div>
+            }
+
+            @* Общая кнопка сохранения в футере *@
+            <div class="border-t border-slate-100 dark:border-zinc-800/60 mt-6 pt-4 flex justify-end">
+                <button @onclick="Save" disabled="@_saving"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+                    @if (_saving)
+                    {
+                        <span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    }
+                    else
+                    {
+                        <LucideIcon Name="save" Class="w-4 h-4" />
+                    }
+                    <span>Сохранить настройки</span>
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _saving;
+    private SystemSettingsDto? _settings;
+    private int _activeTab = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await SettingsService.GetSettingsAsync() ?? new();
+        _loading = false;
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        var ok = await SettingsService.UpdateSettingsAsync(_settings!);
+        _saving = false;
+        Snackbar.Add(ok ? "Настройки успешно сохранены" : "Ошибка сохранения", ok ? Severity.Success : Severity.Error);
+    }
+}

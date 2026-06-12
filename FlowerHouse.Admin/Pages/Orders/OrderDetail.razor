@@ -1,0 +1,494 @@
+﻿@page "/orders/{Id:int}"
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+
+@inject OrderService OrderService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>FlowerHouse — Детали заказа</PageTitle>
+
+@if (_loading)
+{
+    <div class="h-40 rounded-xl bg-slate-100 dark:bg-zinc-800 skeleton w-full mb-6"></div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="md:col-span-2 h-96 rounded-xl bg-slate-100 dark:bg-zinc-800 skeleton w-full"></div>
+        <div class="h-96 rounded-xl bg-slate-100 dark:bg-zinc-800 skeleton w-full"></div>
+    </div>
+}
+else if (_order == null)
+{
+    <div class="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-950/30 text-rose-600 dark:text-rose-400 p-4 rounded-xl text-xs mb-4">
+        Заказ не найден
+    </div>
+    <button @onclick="@(() => Navigation.NavigateTo("/orders"))" 
+            class="px-4 py-2 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-lg text-xs font-semibold hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5">
+        <LucideIcon Name="chevron-left" Class="w-3.5 h-3.5" />
+        <span>Вернуться к списку</span>
+    </button>
+}
+else
+{
+    @* --- Header --- *@
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 select-none">
+        <div>
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">Заказ #@_order.OrderNumber</h1>
+                <StatusBadge Status="@_order.Status" />
+            </div>
+            <p class="text-xs text-slate-500 dark:text-zinc-400">Детальная информация о заказе и управление жизненным циклом</p>
+        </div>
+        
+        <button @onclick="@(() => Navigation.NavigateTo("/orders"))" 
+                class="px-3 py-1.5 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-lg text-xs font-semibold hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5">
+            <LucideIcon Name="chevron-left" Class="w-3.5 h-3.5" />
+            <span>Назад</span>
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        @* === ЛЕВАЯ КОЛОНКА (2/3) === *@
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            
+            @* --- Информация о клиенте --- *@
+            <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
+                    <LucideIcon Name="users" Class="w-4 h-4 text-indigo-500" />
+                    <span>Информация о заказчике</span>
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Заказчик</span>
+                        <span class="text-xs font-semibold text-slate-800 dark:text-zinc-200">@_order.CustomerName</span>
+                        <span class="text-[11px] text-slate-500">@_order.CustomerPhone</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Получатель</span>
+                        <span class="text-xs font-semibold text-slate-800 dark:text-zinc-200">@_order.RecipientName</span>
+                        <span class="text-[11px] text-slate-500">@_order.RecipientPhone</span>
+                        @if (_order.IsAnonymous)
+                        {
+                            <span class="inline-flex mt-1 items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-950/30 max-w-max">
+                                Анонимная доставка
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @* --- Доставка --- *@
+            <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
+                    <LucideIcon Name="truck" Class="w-4 h-4 text-indigo-500" />
+                    <span>Адрес и сроки доставки</span>
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="sm:col-span-1 flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Адрес доставки</span>
+                        <span class="text-xs text-slate-800 dark:text-zinc-200">@_order.DeliveryAddress</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Дата доставки</span>
+                        <span class="text-xs text-slate-800 dark:text-zinc-200">@(_order.DeliveryDate?.ToString("dd.MM.yyyy") ?? "—")</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Интервал времени</span>
+                        <span class="text-xs text-slate-800 dark:text-zinc-200">@(_order.DeliveryTimeSlot ?? "—")</span>
+                    </div>
+                </div>
+            </div>
+
+            @* --- Позиции заказа --- *@
+            <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+                <div class="px-5 py-4 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 select-none">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                        <LucideIcon Name="package" Class="w-4 h-4 text-indigo-500" />
+                        <span>Позиции заказа (@_order.Items.Count)</span>
+                    </h3>
+                </div>
+                
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-slate-50 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                        <tr>
+                            <th class="p-4 w-16">Фото</th>
+                            <th class="p-4">Товар</th>
+                            <th class="p-4 w-24 text-center">Кол-во</th>
+                            <th class="p-4 w-28 text-right">Цена</th>
+                            <th class="p-4 w-28 text-right">Сумма</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 dark:divide-zinc-800 text-slate-700 dark:text-zinc-300">
+                        @foreach (var item in _order.Items)
+                        {
+                            <tr>
+                                <td class="p-4">
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                    {
+                                        <img src="@item.ImageUrl" alt="@item.ProductName" class="w-10 h-10 object-cover rounded-md border border-slate-100 dark:border-zinc-800" />
+                                    }
+                                    else
+                                    {
+                                        <div class="w-10 h-10 bg-slate-100 dark:bg-zinc-800 rounded-md flex items-center justify-center text-slate-400">
+                                            <LucideIcon Name="image" Class="w-4 h-4" />
+                                        </div>
+                                    }
+                                </td>
+                                <td class="p-4">
+                                    <div class="font-semibold text-slate-800 dark:text-zinc-200">@item.ProductName</div>
+                                    @if (!string.IsNullOrEmpty(item.SizeName))
+                                    {
+                                        <div class="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Размер: @item.SizeName</div>
+                                    }
+                                </td>
+                                <td class="p-4 text-center">@item.Quantity</td>
+                                <td class="p-4 text-right">@item.Price.ToString("N0") с.</td>
+                                <td class="p-4 text-right font-bold text-slate-900 dark:text-zinc-100">@((item.Price * item.Quantity).ToString("N0")) с.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @* --- Дополнения --- *@
+            @if (_order.Addons?.Any() == true)
+            {
+                <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+                    <div class="px-5 py-4 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 select-none">
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                            <LucideIcon Name="gift" Class="w-4 h-4 text-indigo-500" />
+                            <span>Дополнения к заказу</span>
+                        </h3>
+                    </div>
+                    
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-slate-50 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                            <tr>
+                                <th class="p-4">Название</th>
+                                <th class="p-4 w-24 text-center">Кол-во</th>
+                                <th class="p-4 w-28 text-right">Цена</th>
+                                <th class="p-4 w-28 text-right">Сумма</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 dark:divide-zinc-800 text-slate-700 dark:text-zinc-300">
+                            @foreach (var addon in _order.Addons)
+                            {
+                                <tr>
+                                    <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">@addon.Name</td>
+                                    <td class="p-4 text-center">@addon.Quantity</td>
+                                    <td class="p-4 text-right">@addon.Price.ToString("N0") с.</td>
+                                    <td class="p-4 text-right font-bold text-slate-900 dark:text-zinc-100">@((addon.Price * addon.Quantity).ToString("N0")) с.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @* --- Открытка --- *@
+            @if (!string.IsNullOrEmpty(_order.PostcardText) || !string.IsNullOrEmpty(_order.PostcardImageUrl))
+            {
+                <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
+                        <LucideIcon Name="mail" Class="w-4 h-4 text-indigo-500" />
+                        <span>Поздравительная открытка</span>
+                    </h3>
+                    <div class="flex flex-col sm:flex-row gap-4 items-start">
+                        @if (!string.IsNullOrEmpty(_order.PostcardImageUrl))
+                        {
+                            <img src="@_order.PostcardImageUrl" alt="Открытка" class="w-40 h-40 object-cover rounded-lg border border-slate-100 dark:border-zinc-800 shrink-0" />
+                        }
+                        @if (!string.IsNullOrEmpty(_order.PostcardText))
+                        {
+                            <div class="flex-grow p-4 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl italic text-xs text-slate-700 dark:text-zinc-300 relative">
+                                <span class="absolute top-2 left-2 text-2xl text-slate-200 dark:text-zinc-800 leading-none select-none">“</span>
+                                <p class="pl-4 pr-2 py-1 select-text">@_order.PostcardText</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* --- Хронология статусов --- *@
+            @if (_order.Timeline?.Any() == true)
+            {
+                <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
+                        <LucideIcon Name="file-text" Class="w-4 h-4 text-indigo-500" />
+                        <span>История изменения статусов</span>
+                    </h3>
+                    
+                    <MudTimeline TimelinePosition="TimelinePosition.Start" Class="px-0">
+                        @foreach (var entry in _order.Timeline.OrderByDescending(t => t.Timestamp))
+                        {
+                            <MudTimelineItem Color="@GetTimelineColor(entry.Status)" Size="Size.Small">
+                                <ItemContent>
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex items-center gap-2">
+                                            <StatusBadge Status="@entry.Status" />
+                                            <span class="text-[10px] text-slate-400 dark:text-zinc-500">
+                                                @entry.Timestamp.ToString("dd.MM.yyyy HH:mm")
+                                            </span>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(entry.Comment))
+                                        {
+                                            <p class="text-[11px] text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-950 px-3 py-1.5 border border-slate-100 dark:border-zinc-800 rounded-lg max-w-max mt-0.5 select-text">
+                                                @entry.Comment
+                                            </p>
+                                        }
+                                    </div>
+                                </ItemContent>
+                            </MudTimelineItem>
+                        }
+                    </MudTimeline>
+                </div>
+            }
+        </div>
+
+        @* === ПРАВАЯ КОЛОНКА (1/3) === *@
+        <div class="flex flex-col gap-6">
+            
+            @* --- Смена Статуса --- *@
+            <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-4 select-none">Управление статусом</h3>
+                
+                <div class="flex items-center gap-2 mb-4 select-none">
+                    <span class="text-xs text-slate-400 dark:text-zinc-500">Текущий:</span>
+                    <StatusBadge Status="@_order.Status" />
+                </div>
+
+                <MudSelect T="string" @bind-Value="_newStatus" Label="Новый статус"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3 font-semibold text-xs">
+                    <MudSelectItem T="string" Value="@("new")">Новый</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("confirmed")">Подтверждён</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("assembling")">Собирается</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("ready")">Фото готово</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("delivering")">Доставляется</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("delivered")">Доставлен</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("cancelled")">Отменён</MudSelectItem>
+                </MudSelect>
+
+                <MudTextField @bind-Value="_statusComment" Label="Комментарий к статусу" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Lines="2" Class="mb-4 text-xs" />
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.Update" OnClick="UpdateStatus"
+                           Style="text-transform:none; font-weight:600; border-radius:8px;"
+                           Disabled="@(string.IsNullOrEmpty(_newStatus) || _newStatus == _order.Status || _updatingStatus)">
+                    @if (_updatingStatus)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Обновить статус
+                </MudButton>
+            </div>
+
+            @* --- Фото Заказа --- *@
+            <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
+                    <LucideIcon Name="image" Class="w-4 h-4 text-indigo-500" />
+                    <span>Фото выполненного заказа</span>
+                </h3>
+                
+                @if (!string.IsNullOrEmpty(_order.PhotoUrl))
+                {
+                    <img src="@_order.PhotoUrl" alt="Фото заказа" class="w-full max-h-52 object-cover rounded-lg border border-slate-100 dark:border-zinc-800 mb-4" />
+                }
+                else
+                {
+                    <div class="p-4 bg-slate-50 dark:bg-zinc-950 border border-dashed border-slate-200 dark:border-zinc-800 text-center rounded-lg text-xs text-slate-400 mb-4 select-none">
+                        Фото от курьера еще не загружено
+                    </div>
+                }
+
+                <ImageUpload MaxFiles="1" OnFilesSelected="OnPhotoSelected" />
+                @if (_uploadingPhoto)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-3" />
+                }
+            </div>
+
+            @* --- Итог Оплаты --- *@
+            <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
+                    <LucideIcon Name="percent" Class="w-4 h-4 text-indigo-500" />
+                    <span>Расчёт стоимости</span>
+                </h3>
+                
+                <div class="flex flex-col gap-2.5 text-xs text-slate-700 dark:text-zinc-300">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400 dark:text-zinc-500">Подытог:</span>
+                        <span>@_order.Subtotal.ToString("N0") с.</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400 dark:text-zinc-500">Доставка:</span>
+                        <span>@_order.DeliveryFee.ToString("N0") с.</span>
+                    </div>
+                    @if (_order.Discount > 0)
+                    {
+                        <div class="flex justify-between items-center text-rose-500">
+                            <span>Скидка:</span>
+                            <span>-@_order.Discount.ToString("N0") с.</span>
+                        </div>
+                    }
+                    @if (_order.BonusUsed > 0)
+                    {
+                        <div class="flex justify-between items-center text-amber-500">
+                            <span>Бонусы:</span>
+                            <span>-@_order.BonusUsed.ToString("N0") с.</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_order.PromoCode))
+                    {
+                        <div class="flex justify-between items-center select-none">
+                            <span class="text-slate-400 dark:text-zinc-500">Промокод:</span>
+                            <span class="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-950/30 text-[10px] font-bold">
+                                @_order.PromoCode
+                            </span>
+                        </div>
+                    }
+                    <hr class="border-slate-100 dark:border-zinc-800 my-1" />
+                    <div class="flex justify-between items-center text-sm font-bold text-slate-900 dark:text-zinc-50">
+                        <span>Итого к оплате:</span>
+                        <span class="text-indigo-600 dark:text-indigo-400 text-base">@_order.Total.ToString("N0") с.</span>
+                    </div>
+                    <hr class="border-slate-100 dark:border-zinc-800 my-1" />
+                    <div class="flex justify-between items-center select-none">
+                        <span class="text-slate-400 dark:text-zinc-500">Способ оплаты:</span>
+                        <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold text-[10px] uppercase">
+                            @_order.PaymentMethod
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private OrderDto? _order;
+    private bool _loading = true;
+    private string _newStatus = "";
+    private string _statusComment = "";
+    private bool _updatingStatus;
+    private bool _uploadingPhoto;
+
+    private List<BreadcrumbItem> _breadcrumbs = new()
+    {
+        new("Главная", href: "/"),
+        new("Заказы", href: "/orders"),
+        new("Загрузка...", href: null, disabled: true)
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrder();
+    }
+
+    private async Task LoadOrder()
+    {
+        _loading = true;
+        try
+        {
+            _order = await OrderService.GetOrderAsync(Id);
+            if (_order != null)
+            {
+                _newStatus = _order.Status;
+                _breadcrumbs = new()
+                {
+                    new("Главная", href: "/"),
+                    new("Заказы", href: "/orders"),
+                    new($"Заказ #{_order.OrderNumber}", href: null, disabled: true)
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка загрузки заказа: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task UpdateStatus()
+    {
+        if (string.IsNullOrEmpty(_newStatus) || _newStatus == _order?.Status) return;
+
+        _updatingStatus = true;
+        try
+        {
+            var request = new OrderStatusUpdateRequest 
+            { 
+                Status = _newStatus, 
+                Comment = string.IsNullOrWhiteSpace(_statusComment) ? null : _statusComment 
+            };
+            var success = await OrderService.UpdateStatusAsync(Id, request);
+            if (success)
+            {
+                Snackbar.Add("Статус заказа обновлён", Severity.Success);
+                _statusComment = "";
+                await LoadOrder();
+            }
+            else
+            {
+                Snackbar.Add("Не удалось обновить статус", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _updatingStatus = false;
+        }
+    }
+
+    private async Task OnPhotoSelected(List<IBrowserFile> files)
+    {
+        if (files.Count == 0) return;
+
+        _uploadingPhoto = true;
+        try
+        {
+            var file = files.First();
+            var content = new MultipartFormDataContent();
+            var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            content.Add(new StreamContent(stream), "photo", file.Name);
+            var success = await OrderService.UploadPhotoAsync(Id, content);
+            if (success)
+            {
+                Snackbar.Add("Фото загружено", Severity.Success);
+                await LoadOrder();
+            }
+            else
+            {
+                Snackbar.Add("Не удалось загрузить фото", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка загрузки фото: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _uploadingPhoto = false;
+        }
+    }
+
+    private Color GetTimelineColor(string status) => status?.ToLower() switch
+    {
+        "new" => Color.Info,
+        "confirmed" => Color.Primary,
+        "assembling" => Color.Warning,
+        "ready" => Color.Secondary,
+        "delivering" => Color.Primary,
+        "delivered" => Color.Success,
+        "cancelled" => Color.Error,
+        _ => Color.Default
+    };
+}

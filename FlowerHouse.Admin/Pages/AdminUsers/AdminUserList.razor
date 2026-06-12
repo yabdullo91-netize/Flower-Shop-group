@@ -1,0 +1,138 @@
+@page "/admin-users"
+@attribute [Authorize(Roles = "SuperAdmin")]
+
+@inject UserService UserService
+@inject ISnackbar Snackbar
+@inject DialogHelper DialogHelper
+
+<PageTitle>FlowerHouse — Админ-аккаунты</PageTitle>
+
+<PageHeader Title="Админ-аккаунты" Subtitle="Управление учётными записями администраторов системы">
+    <Actions>
+        <button @onclick="OpenCreate" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+            <LucideIcon Name="person-add" Class="w-4 h-4" />
+            <span>Создать админа</span>
+        </button>
+    </Actions>
+</PageHeader>
+
+<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+    <UiTable Items="@_admins" TItem="UserDto" IsLoading="@_loading" ShowPagination="false" ColSpan="5">
+        <HeaderTemplate>
+            <th class="p-4">Телефон</th>
+            <th class="p-4">Имя</th>
+            <th class="p-4">Роль</th>
+            <th class="p-4 w-36 text-center">Статус</th>
+            <th class="p-4 w-28 text-center">Действия</th>
+        </HeaderTemplate>
+        <RowTemplate>
+            <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">@context.Phone</td>
+            <td class="p-4 font-medium text-slate-700 dark:text-zinc-300">@(context.Name ?? "—")</td>
+            <td class="p-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold @(context.Role == "SuperAdmin" ? "bg-emerald-500/10 text-emerald-500" : "bg-violet-500/10 text-violet-500")">
+                    @context.Role
+                </span>
+            </td>
+            <td class="p-4 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold @(context.IsBlocked ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-500")">
+                    @(context.IsBlocked ? "Заблокирован" : "Активен")
+                </span>
+            </td>
+            <td class="p-4 text-center">
+                <div class="flex items-center justify-center gap-1">
+                    @if (context.IsBlocked)
+                    {
+                        <button @onclick="() => Unblock(context)" title="Разблокировать"
+                                class="p-1.5 text-emerald-600 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                            <LucideIcon Name="lock-open" Class="w-4 h-4" />
+                        </button>
+                    }
+                    else
+                    {
+                        <button @onclick="() => Block(context)" title="Заблокировать"
+                                class="p-1.5 text-red-600 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                            <LucideIcon Name="lock" Class="w-4 h-4" />
+                        </button>
+                    }
+                </div>
+            </td>
+        </RowTemplate>
+    </UiTable>
+</div>
+
+<UiModal IsOpen="_dialogVisible" Title="Создать администратора" OnClose="() => _dialogVisible = false">
+    <ChildContent>
+        <div class="space-y-4 pt-2">
+            <MudTextField T="string" @bind-Value="_phone" Label="Телефон" Placeholder="+992..." Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField T="string" @bind-Value="_name" Label="Имя" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <MudSelect T="string" @bind-Value="_role" Label="Роль" Variant="Variant.Outlined">
+                <MudSelectItem T="string" Value="@("Admin")">Admin</MudSelectItem>
+                <MudSelectItem T="string" Value="@("SuperAdmin")">SuperAdmin</MudSelectItem>
+            </MudSelect>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button @onclick="() => _dialogVisible = false" 
+                class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+            Отмена
+        </button>
+        <button @onclick="CreateAdmin" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors">
+            Создать
+        </button>
+    </FooterContent>
+</UiModal>
+
+@code {
+    private bool _loading = true;
+    private List<UserDto> _admins = [];
+    private bool _dialogVisible;
+    private string _phone = "+992"; 
+    private string _name = ""; 
+    private string _role = "Admin";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        var r = await UserService.GetUsersAsync(1, 100, null); // Load up to 100 users locally to filter
+        _admins = r?.Items?.Where(u => u.Role is "Admin" or "SuperAdmin").ToList() ?? [];
+        _loading = false;
+    }
+
+    private void OpenCreate() { _phone="+992"; _name=""; _role="Admin"; _dialogVisible=true; }
+
+    private async Task CreateAdmin()
+    {
+        if (string.IsNullOrWhiteSpace(_phone) || string.IsNullOrWhiteSpace(_name))
+        {
+            Snackbar.Add("Все поля обязательны", Severity.Warning);
+            return;
+        }
+
+        var ok = await UserService.CreateAdminAsync(new CreateAdminRequest{Phone=_phone,Name=_name,Role=_role});
+        Snackbar.Add(ok?"Админ создан":"Ошибка",ok?Severity.Success:Severity.Error);
+        _dialogVisible=false; 
+        if(ok) await LoadData();
+    }
+
+    private async Task Block(UserDto u)
+    {
+        if (!await DialogHelper.ConfirmAsync($"Заблокировать {u.Phone}?")) return;
+        var ok = await UserService.BlockUserAsync(u.Id);
+        Snackbar.Add(ok ? "Пользователь заблокирован" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        if (ok) await LoadData();
+    }
+
+    private async Task Unblock(UserDto u) 
+    { 
+        var ok = await UserService.UnblockUserAsync(u.Id); 
+        Snackbar.Add(ok ? "Пользователь разблокирован" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        if (ok) await LoadData(); 
+    }
+}

@@ -1,0 +1,136 @@
+@page "/delivery"
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+
+@inject DeliveryService DeliveryService
+@inject ISnackbar Snackbar
+@inject DialogHelper DialogHelper
+
+<PageTitle>FlowerHouse — Временные слоты</PageTitle>
+
+<PageHeader Title="Временные слоты доставки" Subtitle="Управление доступными интервалами и загрузкой курьеров">
+    <Actions>
+        <button @onclick="OpenCreateDialog" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+            <LucideIcon Name="plus" Class="w-4 h-4" />
+            <span>Добавить слот</span>
+        </button>
+    </Actions>
+</PageHeader>
+
+<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+    <UiTable Items="@_slots" TItem="TimeSlotDto" IsLoading="@_loading" ShowPagination="false" ColSpan="6">
+        <HeaderTemplate>
+            <th class="p-4">Начало</th>
+            <th class="p-4">Конец</th>
+            <th class="p-4">Загрузка слота</th>
+            <th class="p-4 w-44">Макс. заказов</th>
+            <th class="p-4 w-36 text-center">Активен</th>
+            <th class="p-4 w-28 text-center">Действия</th>
+        </HeaderTemplate>
+        <RowTemplate>
+            <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">@context.StartTime</td>
+            <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">@context.EndTime</td>
+            <td class="p-4">
+                <div class="flex flex-col gap-1 w-full max-w-[150px]">
+                    <div class="flex justify-between text-[10px] font-semibold text-slate-500 dark:text-zinc-400">
+                        <span>Загрузка</span>
+                        <span>@context.CurrentOrders / @context.MaxOrders</span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-zinc-800/80 rounded-full h-1.5 overflow-hidden">
+                        <div class="h-full rounded-full @GetLoadBarColor(context)" style="width: @Math.Min(100, GetLoad(context))%"></div>
+                    </div>
+                </div>
+            </td>
+            <td class="p-4 font-medium text-slate-500 dark:text-zinc-400">@context.MaxOrders</td>
+            <td class="p-4 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold @(context.IsActive ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-500/10 text-slate-400")">
+                    @(context.IsActive ? "Да" : "Нет")
+                </span>
+            </td>
+            <td class="p-4 text-center">
+                <div class="flex items-center justify-center gap-1">
+                    <button @onclick="() => OpenEditDialog(context)" 
+                            class="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                        <LucideIcon Name="edit" Class="w-4 h-4" />
+                    </button>
+                    <button @onclick="() => DeleteSlot(context)" 
+                            class="p-1.5 text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                        <LucideIcon Name="trash" Class="w-4 h-4" />
+                    </button>
+                </div>
+            </td>
+        </RowTemplate>
+    </UiTable>
+</div>
+
+<UiModal IsOpen="_dialogVisible" Title="@(_editSlot != null ? "Редактировать слот" : "Создать слот")" OnClose="() => _dialogVisible = false">
+    <ChildContent>
+        <div class="space-y-4 pt-2">
+            <MudTextField T="string" @bind-Value="_startTime" Label="Время начала" Placeholder="09:00" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField T="string" @bind-Value="_endTime" Label="Время конца" Placeholder="12:00" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <MudNumericField T="int" @bind-Value="_maxOrders" Label="Макс. заказов" Variant="Variant.Outlined" Min="1" Class="mb-3" />
+            
+            <div class="flex items-center justify-between py-2 border-t border-slate-100 dark:border-zinc-800/50 mt-4">
+                <span class="text-xs font-semibold text-slate-500 dark:text-zinc-400">Активен</span>
+                <MudSwitch T="bool" @bind-Value="_isActive" Color="Color.Success" />
+            </div>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button @onclick="() => _dialogVisible = false" 
+                class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+            Отмена
+        </button>
+        <button @onclick="SaveSlot" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors">
+            Сохранить
+        </button>
+    </FooterContent>
+</UiModal>
+
+@code {
+    private bool _loading = true;
+    private List<TimeSlotDto> _slots = [];
+    private bool _dialogVisible; 
+    private TimeSlotDto? _editSlot;
+    private string _startTime = ""; 
+    private string _endTime = ""; 
+    private int _maxOrders = 10; 
+    private bool _isActive = true;
+
+    protected override async Task OnInitializedAsync() { await LoadData(); }
+    private async Task LoadData() { _loading = true; _slots = await DeliveryService.GetSlotsAsync() ?? []; _loading = false; }
+
+    private void OpenCreateDialog() { _editSlot = null; _startTime = ""; _endTime = ""; _maxOrders = 10; _isActive = true; _dialogVisible = true; }
+    private void OpenEditDialog(TimeSlotDto s) { _editSlot = s; _startTime = s.StartTime; _endTime = s.EndTime; _maxOrders = s.MaxOrders; _isActive = s.IsActive; _dialogVisible = true; }
+
+    private async Task SaveSlot()
+    {
+        if (string.IsNullOrWhiteSpace(_startTime) || string.IsNullOrWhiteSpace(_endTime))
+        {
+            Snackbar.Add("Время начала и окончания не могут быть пустыми", Severity.Warning);
+            return;
+        }
+
+        var req = new TimeSlotCreateRequest { StartTime = _startTime, EndTime = _endTime, MaxOrders = _maxOrders, IsActive = _isActive };
+        var ok = _editSlot != null ? await DeliveryService.UpdateAsync(_editSlot.Id, req) : await DeliveryService.CreateAsync(req);
+        Snackbar.Add(ok ? "Сохранено" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        _dialogVisible = false; 
+        if (ok) await LoadData();
+    }
+
+    private async Task DeleteSlot(TimeSlotDto s)
+    {
+        if (!await DialogHelper.ConfirmAsync($"Удалить слот {s.StartTime}–{s.EndTime}?")) return;
+        var ok = await DeliveryService.DeleteAsync(s.Id); 
+        Snackbar.Add(ok ? "Удалено" : "Ошибка", ok ? Severity.Success : Severity.Error); 
+        if (ok) await LoadData();
+    }
+
+    private static double GetLoad(TimeSlotDto s) => s.MaxOrders > 0 ? (double)s.CurrentOrders / s.MaxOrders * 100 : 0;
+    private static string GetLoadBarColor(TimeSlotDto s) 
+    { 
+        var pct = GetLoad(s); 
+        return pct > 80 ? "bg-rose-500" : pct > 50 ? "bg-amber-500" : "bg-emerald-500"; 
+    }
+}

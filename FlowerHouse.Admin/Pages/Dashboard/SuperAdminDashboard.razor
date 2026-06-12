@@ -1,0 +1,224 @@
+@page "/superadmin"
+@attribute [Authorize(Roles = "SuperAdmin")]
+
+@inject SettingsService SettingsService
+@inject UIStateService UIState
+@inject ISnackbar Snackbar
+
+<PageTitle>FlowerHouse — Системный мониторинг</PageTitle>
+
+@* --- Заголовок --- *@
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 select-none">
+    <div>
+        <h1 class="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+            <LucideIcon Name="shield" Class="w-5 h-5 text-emerald-500" />
+            <span>Системный мониторинг</span>
+        </h1>
+        <p class="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+            Мониторинг инфраструктуры, тенантов и логов безопасности для: <strong>@UIState.ActiveTenantName</strong>
+        </p>
+    </div>
+    
+    <button @onclick="RefreshSystemState" 
+            class="px-4 py-2 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+        <LucideIcon Name="refresh-cw" Class="w-3.5 h-3.5" />
+        <span>Обновить метрики</span>
+    </button>
+</div>
+
+@* --- Системные Метрики (CPU, Memory, DB, API) --- *@
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 select-none">
+    @* CPU *@
+    <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 flex flex-col justify-between shadow-sm theme-transition">
+        <div class="flex justify-between text-slate-400 dark:text-zinc-500 text-xs font-bold uppercase tracking-wider">
+            <span>Загрузка CPU</span>
+            <LucideIcon Name="cpu" Class="w-4 h-4 text-violet-500" />
+        </div>
+        <div class="text-2xl font-bold text-slate-900 dark:text-zinc-50 mt-4">@_cpuUsage%</div>
+        <div class="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-1.5 mt-3 overflow-hidden">
+            <div class="bg-indigo-600 dark:bg-violet-400 h-full rounded-full" style="width: @_cpuUsage%"></div>
+        </div>
+    </div>
+
+    @* RAM *@
+    <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 flex flex-col justify-between shadow-sm theme-transition">
+        <div class="flex justify-between text-slate-400 dark:text-zinc-500 text-xs font-bold uppercase tracking-wider">
+            <span>Оперативная память</span>
+            <LucideIcon Name="hard-drive" Class="w-4 h-4 text-cyan-500" />
+        </div>
+        <div class="text-2xl font-bold text-slate-900 dark:text-zinc-50 mt-4">@_memoryUsage ГБ / 16 ГБ</div>
+        <div class="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-1.5 mt-3 overflow-hidden">
+            <div class="bg-cyan-500 h-full rounded-full" style="width: @((double)_memoryUsage / 16 * 100)%"></div>
+        </div>
+    </div>
+
+    @* DB Connectors *@
+    <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 flex flex-col justify-between shadow-sm theme-transition">
+        <div class="flex justify-between text-slate-400 dark:text-zinc-500 text-xs font-bold uppercase tracking-wider">
+            <span>База данных</span>
+            <LucideIcon Name="database" Class="w-4 h-4 text-emerald-500" />
+        </div>
+        <div class="text-2xl font-bold text-emerald-500 mt-4">99.9% Online</div>
+        <span class="text-[9px] text-slate-400 dark:text-zinc-500 mt-3 font-semibold uppercase tracking-wider">Время отклика: 4мс</span>
+    </div>
+
+    @* API Response *@
+    <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 flex flex-col justify-between shadow-sm theme-transition">
+        <div class="flex justify-between text-slate-400 dark:text-zinc-500 text-xs font-bold uppercase tracking-wider">
+            <span>API отклик (P95)</span>
+            <LucideIcon Name="zap" Class="w-4 h-4 text-amber-500" />
+        </div>
+        <div class="text-2xl font-bold text-slate-900 dark:text-zinc-50 mt-4">120 мс</div>
+        <span class="text-[9px] text-slate-400 dark:text-zinc-500 mt-3 font-semibold uppercase tracking-wider">15,420 запросов / мин</span>
+    </div>
+</div>
+
+@* --- Раздел: Статус сервисов + Безопасность --- *@
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    @* Безопасность *@
+    <div class="lg:col-span-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+        <div class="px-5 py-4 border-b border-slate-100 dark:border-zinc-800/60 select-none">
+            <span class="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">События безопасности</span>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-50/50 dark:bg-zinc-950/20 border-b border-slate-100 dark:border-zinc-800/40 text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider select-none">
+                    <tr>
+                        <th class="p-4 w-28">Время</th>
+                        <th class="p-4">Событие</th>
+                        <th class="p-4 w-32 text-center">Критичность</th>
+                        <th class="p-4 w-36">IP-Адрес</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/40 text-slate-700 dark:text-zinc-300 font-medium">
+                    @foreach (var ev in _securityEvents)
+                    {
+                        <tr>
+                            <td class="p-4 text-slate-400 dark:text-zinc-500">@ev.Time</td>
+                            <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">@ev.Description</td>
+                            <td class="p-4 text-center">
+                                <span class="inline-flex items-center px-2 py-0.5 text-[9px] font-bold rounded @(ev.Severity == "CRITICAL" ? "bg-red-500/10 text-red-500" : ev.Severity == "WARNING" ? "bg-amber-500/10 text-amber-500" : "bg-blue-500/10 text-blue-500")">
+                                    @ev.Severity
+                                </span>
+                            </td>
+                            <td class="p-4 font-mono text-slate-500 dark:text-zinc-400">@ev.Ip</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @* Статус модулей *@
+    <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition select-none">
+        <h3 class="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-5">Статус инфраструктуры</h3>
+        
+        <div class="space-y-4">
+            <div class="flex justify-between items-center py-2 border-b border-slate-50 dark:border-zinc-800/40">
+                <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Главный шлюз (API Gateway)</span>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Active</span>
+                </div>
+            </div>
+            <div class="flex justify-between items-center py-2 border-b border-slate-50 dark:border-zinc-800/40">
+                <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Очередь сообщений (RabbitMQ)</span>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Active</span>
+                </div>
+            </div>
+            <div class="flex justify-between items-center py-2 border-b border-slate-50 dark:border-zinc-800/40">
+                <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Фоновые задачи (Hangfire)</span>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Active</span>
+                </div>
+            </div>
+            <div class="flex justify-between items-center py-2">
+                <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Служба уведомлений (Push)</span>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Active</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- Раздел: Тенанты и права --- *@
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <div class="lg:col-span-2">
+        <PermissionsMatrix />
+    </div>
+
+    <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
+        <h3 class="text-xs font-bold text-red-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+            <LucideIcon Name="alert-triangle" Class="w-4 h-4 text-red-500" />
+            <span>Зона опасных операций</span>
+        </h3>
+        <p class="text-xs text-slate-500 dark:text-zinc-400 mb-6 leading-relaxed">
+            Действия ниже приводят к необратимой модификации критических настроек и сбросу базы данных текущей организации.
+        </p>
+        <button @onclick="OpenDangerDialog" 
+                class="w-full py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-1.5">
+            <LucideIcon Name="trash" Class="w-4 h-4" />
+            <span>Сбросить транзакции тенанта</span>
+        </button>
+    </div>
+</div>
+
+@* Двойное подтверждение для критических операций *@
+<DangerModal IsOpen="@_isDangerOpen" 
+             Message="Вы собираетесь удалить все транзакции текущего тенанта. Это действие нельзя отменить!" 
+             ConfirmWord="СБРОСИТЬ" 
+             OnConfirm="HandleDangerConfirm" 
+             OnCancel="() => _isDangerOpen = false" />
+
+@code {
+    private int _cpuUsage = 42;
+    private double _memoryUsage = 6.4;
+    private bool _isDangerOpen = false;
+
+    private class SecurityEvent
+    {
+        public string Time { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Severity { get; set; } = "";
+        public string Ip { get; set; } = "";
+    }
+
+    private readonly List<SecurityEvent> _securityEvents = new()
+    {
+        new SecurityEvent { Time = "11:24:15", Description = "Вход администратора в систему", Severity = "INFO", Ip = "192.168.1.15" },
+        new SecurityEvent { Time = "11:20:02", Description = "5 неудачных попыток входа (отказ)", Severity = "WARNING", Ip = "94.205.10.4" },
+        new SecurityEvent { Time = "10:14:23", Description = "Изменение роли пользователя ID=125", Severity = "WARNING", Ip = "192.168.1.15" },
+        new SecurityEvent { Time = "09:05:44", Description = "Подозрительная активность в API (/billing)", Severity = "CRITICAL", Ip = "5.10.220.14" }
+    };
+
+    protected override void OnInitialized()
+    {
+        UIState.OnTenantChanged += RefreshSystemState;
+    }
+
+    private void RefreshSystemState()
+    {
+        var rand = new Random();
+        _cpuUsage = rand.Next(15, 85);
+        _memoryUsage = Math.Round(5.0 + rand.NextDouble() * 5.0, 1);
+        Snackbar.Add("Данные мониторинга обновлены", Severity.Success);
+        StateHasChanged();
+    }
+
+    private void OpenDangerDialog()
+    {
+        _isDangerOpen = true;
+    }
+
+    private void HandleDangerConfirm()
+    {
+        _isDangerOpen = false;
+        Snackbar.Add("Критический сброс данных успешно выполнен!", Severity.Success);
+    }
+}

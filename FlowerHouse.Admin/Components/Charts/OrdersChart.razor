@@ -1,0 +1,79 @@
+﻿@* График заказов — MudChart Line *@
+
+@if (_loading)
+{
+    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
+}
+else if (_chartData != null)
+{
+    <MudPaper Class="pa-4" Elevation="0" Style="border-radius: 12px;">
+        <div class="d-flex align-center justify-space-between mb-4">
+            <div>
+                <MudText Typo="Typo.h6" Style="font-weight: 700;">График заказов</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">За последние @Days дней</MudText>
+            </div>
+            <MudChipSet T="string" SelectedValuesChanged="OnPeriodChanged" SelectionMode="SelectionMode.SingleSelection">
+                <MudChip T="string" Value="@("7")" Variant="Variant.Text" Size="Size.Small">7 дн</MudChip>
+                <MudChip T="string" Value="@("14")" Variant="Variant.Text" Size="Size.Small">14 дн</MudChip>
+                <MudChip T="string" Value="@("30")" Variant="Variant.Text" Size="Size.Small" Default="true">30 дн</MudChip>
+            </MudChipSet>
+        </div>
+
+        <MudChart ChartType="ChartType.Line" ChartSeries="@_series"
+                  XAxisLabels="@_labels" Width="100%" Height="300px" />
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public int Days { get; set; } = 30;
+    [Parameter] public EventCallback<int> DaysChanged { get; set; }
+
+    [Inject] private DashboardService DashboardService { get; set; } = null!;
+
+    private bool _loading = true;
+    private OrdersChartDto? _chartData;
+    private List<ChartSeries<double>> _series = [];
+    private string[] _labels = [];
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChartAsync();
+    }
+
+    private async Task LoadChartAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        _chartData = await DashboardService.GetOrdersChartAsync(Days);
+
+        if (_chartData != null)
+        {
+            _labels = _chartData.Labels?.ToArray() ?? [];
+            _series =
+            [
+                new ChartSeries<double>
+                {
+                    Name = "Заказы",
+                    Data = _chartData.Values?.Select(v => (double)v).ToArray() ?? []
+                }
+            ];
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private async Task OnPeriodChanged(IReadOnlyCollection<string> values)
+    {
+        var val = values.FirstOrDefault();
+        if (int.TryParse(val, out var days))
+        {
+            Days = days;
+            await DaysChanged.InvokeAsync(Days);
+            await LoadChartAsync();
+        }
+    }
+}

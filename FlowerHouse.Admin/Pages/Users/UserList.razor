@@ -1,0 +1,163 @@
+@page "/users"
+@attribute [Authorize(Roles = "SuperAdmin")]
+
+@inject UserService UserService
+@inject ISnackbar Snackbar
+@inject DialogHelper DialogHelper
+@inject NavigationManager Navigation
+
+<PageTitle>FlowerHouse — Пользователи</PageTitle>
+
+<PageHeader Title="Пользователи" Subtitle="Управление клиентами и покупателями интернет-магазина" />
+
+@* Фильтры и поиск *@
+<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 shadow-sm mb-6 flex flex-col sm:flex-row gap-4 items-end theme-transition select-none">
+    <div class="flex-grow flex flex-col gap-1.5 w-full">
+        <label class="text-xs font-semibold text-slate-500 dark:text-zinc-400">Поиск пользователей</label>
+        <div class="relative">
+            <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 dark:text-zinc-500">
+                <LucideIcon Name="search" Class="w-4 h-4" />
+            </span>
+            <input type="text" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" placeholder="Поиск по имени или телефону..."
+                   class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg outline-none text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:border-indigo-500 transition-colors" />
+        </div>
+    </div>
+    <div class="flex gap-2 w-full sm:w-auto">
+        <button @onclick="SearchUsers" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-1.5 h-9 shrink-0 flex-1 sm:flex-none">
+            <span>Найти</span>
+        </button>
+        <button @onclick="ClearSearch" 
+                class="px-3 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors h-9 shrink-0">
+            Сбросить
+        </button>
+    </div>
+</div>
+
+<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
+    <UiTable Items="@_users" TItem="UserDto" IsLoading="@_loading" 
+             CurrentPage="@_currentPage" TotalPages="@_totalPages" OnPageChanged="OnPageChanged"
+             ColSpan="7">
+        <HeaderTemplate>
+            <th class="p-4">Телефон</th>
+            <th class="p-4">Имя</th>
+            <th class="p-4">Роль</th>
+            <th class="p-4 w-32 text-center">Заказов</th>
+            <th class="p-4 w-36">Потрачено</th>
+            <th class="p-4 w-36 text-center">Статус</th>
+            <th class="p-4 w-28 text-center">Действия</th>
+        </HeaderTemplate>
+        <RowTemplate>
+            <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">
+                <a href="/users/@context.Id" class="hover:text-indigo-600 hover:underline">@context.Phone</a>
+            </td>
+            <td class="p-4 font-medium text-slate-700 dark:text-zinc-300">@(context.Name ?? "—")</td>
+            <td class="p-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold @(GetRoleBadgeClass(context.Role))">
+                    @context.Role
+                </span>
+            </td>
+            <td class="p-4 text-center font-medium text-slate-600 dark:text-zinc-400">@context.OrderCount</td>
+            <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">@context.TotalSpent.ToString("N0") с.</td>
+            <td class="p-4 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold @(context.IsBlocked ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-500")">
+                    @(context.IsBlocked ? "Заблокирован" : "Активен")
+                </span>
+            </td>
+            <td class="p-4 text-center" @onclick:stopPropagation="true">
+                <div class="flex items-center justify-center gap-1">
+                    <button @onclick="@(() => Navigation.NavigateTo($"/users/{context.Id}"))" title="Просмотр профиля"
+                            class="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                        <LucideIcon Name="eye" Class="w-4 h-4" />
+                    </button>
+                    @if (context.IsBlocked)
+                    {
+                        <button @onclick="() => Unblock(context)" title="Разблокировать"
+                                class="p-1.5 text-emerald-600 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                            <LucideIcon Name="lock-open" Class="w-4 h-4" />
+                        </button>
+                    }
+                    else
+                    {
+                        <button @onclick="() => Block(context)" title="Заблокировать"
+                                class="p-1.5 text-red-600 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                            <LucideIcon Name="lock" Class="w-4 h-4" />
+                        </button>
+                    }
+                </div>
+            </td>
+        </RowTemplate>
+    </UiTable>
+</div>
+
+@code {
+    private bool _loading = true;
+    private List<UserDto> _users = [];
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+    private const int PageSize = 10;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        var result = await UserService.GetUsersAsync(_currentPage, PageSize, _search);
+        _users = result?.Items ?? [];
+        _totalPages = result != null ? (int)Math.Ceiling((double)result.TotalCount / PageSize) : 1;
+        _loading = false;
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        _currentPage = page;
+        await LoadData();
+    }
+
+    private async Task SearchUsers()
+    {
+        _currentPage = 1;
+        await LoadData();
+    }
+
+    private async Task ClearSearch()
+    {
+        _search = null;
+        _currentPage = 1;
+        await LoadData();
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchUsers();
+        }
+    }
+
+    private async Task Block(UserDto user)
+    {
+        if (!await DialogHelper.ConfirmAsync($"Заблокировать {user.Phone}?")) return;
+        var ok = await UserService.BlockUserAsync(user.Id);
+        Snackbar.Add(ok ? "Пользователь заблокирован" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        if (ok) await LoadData();
+    }
+
+    private async Task Unblock(UserDto user)
+    {
+        var ok = await UserService.UnblockUserAsync(user.Id);
+        Snackbar.Add(ok ? "Пользователь разблокирован" : "Ошибка", ok ? Severity.Success : Severity.Error);
+        if (ok) await LoadData();
+    }
+
+    private static string GetRoleBadgeClass(string role) => role switch
+    {
+        "SuperAdmin" => "bg-emerald-500/10 text-emerald-500",
+        "Admin" => "bg-violet-500/10 text-violet-500",
+        _ => "bg-slate-500/10 text-slate-400"
+    };
+}
