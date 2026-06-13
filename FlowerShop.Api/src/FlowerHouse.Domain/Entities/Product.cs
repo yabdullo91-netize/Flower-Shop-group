@@ -51,8 +51,10 @@ namespace FlowerHouse.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation collections (optional, can be added later)
+        // Navigation collections
         public ICollection<ProductSize> Sizes { get; set; } = new List<ProductSize>();
         public ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
+        public ICollection<ProductPackagingOption> PackagingOptions { get; set; } = new List<ProductPackagingOption>();
+        public ICollection<ProductStemOption> StemOptions { get; set; } = new List<ProductStemOption>();
     }
 }

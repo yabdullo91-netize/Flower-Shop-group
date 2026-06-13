@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+/* ── Dynamic CSS custom properties — values change in dark mode ── */
+:root {
+  --cream: #FAF7F2;
+  --surface: #FFFFFF;
+  --green-deep: #2AABEE;
+  --green-light: #1A8CD8;
+  --rose-dust: #E8B4B8;
+  --ink: #1A1A1A;
+  --muted: #6B6B6B;
+  --error: #C0392B;
+  --border: #E8E2D9;
+  --gold: #B5860D;
+}
+
+.dark {
+  --cream: #1A1F2E;
+  --surface: #212B3C;
+  --green-deep: #2AABEE;
+  --green-light: #40B3F9;
+  --rose-dust: #C87B8A;
+  --ink: #EDE9E1;
+  --muted: #8895A7;
+  --error: #E05858;
+  --border: #2A3550;
+  --gold: #FFD60A;
+}
+
+/* ── Tailwind v4: inline = CSS vars are referenced, not inlined ── */
+@theme inline {
+  --color-cream: var(--cream);
+  --color-surface: var(--surface);
+  --color-green-deep: var(--green-deep);
+  --color-green-light: var(--green-light);
+  --color-rose-dust: var(--rose-dust);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-error: var(--error);
+  --color-border: var(--border);
+  --color-gold: var(--gold);
+
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background-color: var(--cream);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#root { min-height: 100svh; }
+
+.font-serif { font-family: 'Playfair Display', Georgia, serif; }
+
+/* ── Skeleton loader ── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--cream) 25%, var(--border) 50%, var(--cream) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* ── Shake error animation ── */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%  { transform: translateX(-6px); }
+  40%  { transform: translateX(6px); }
+  60%  { transform: translateX(-4px); }
+  80%  { transform: translateX(4px); }
+}
+.shake { animation: shake 0.3s ease-in-out; }
+
+@keyframes petal-burst {
+  0%   { opacity: 1; transform: translate(0,0) scale(1); }
+  100% { opacity: 0; transform: var(--tx, translate(20px,-30px)) scale(0.3); }
+}
+.petal-burst {
+  animation: petal-burst 0.7s ease-out forwards;
+}
+
+@keyframes kenburns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.06) translate(1%, 0.5%); }
+}
+.kenburns {
+  animation: kenburns 10s ease-in-out alternate infinite;
+}
+
+@keyframes draw-check {
+  from { stroke-dashoffset: 100; }
+  to   { stroke-dashoffset: 0; }
+}
+.draw-check { animation: draw-check 0.3s ease forwards; }
+
+@keyframes draw-check-lg {
+  from { stroke-dashoffset: 120; }
+  to   { stroke-dashoffset: 0; }
+}
+/* Triggered after the circle scales in (~400ms delay) */
+.draw-check-lg { animation: draw-check-lg 0.35s 0.4s ease forwards; }
+
+/* ── Float — gentle up/down for empty state hero emojis ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+.float { animation: float 2.8s ease-in-out infinite; }
+
+/* ── fadeSlideIn — used by Input error messages ── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-slide-in { animation: fadeSlideIn 0.18s cubic-bezier(0.22,1,0.36,1) forwards; }
+
+/* ── prefers-reduced-motion ──────────────────────────────────────────────────
+   Strategy: keep functional feedback (fly, price flash, progress bar) as
+   instant-but-visible. Only cut purely decorative effects (kenburns, petals,
+   skeleton shimmer). Framer Motion's MotionConfig respects this via
+   useReducedMotion() in each component.
+*/
+@media (prefers-reduced-motion: reduce) {
+  /* Kill decorative-only animations */
+  .kenburns { animation: none !important; }
+  .petal-burst { display: none !important; }
+  .float { animation: none !important; }
+
+  /* Skeleton shimmer: keep the gradient but stop moving it */
+  .skeleton { animation: none !important; background-position: 0 0 !important; }
+
+  /* Draw-check still fires — just instant */
+  .draw-check, .draw-check-lg {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+  }
+}

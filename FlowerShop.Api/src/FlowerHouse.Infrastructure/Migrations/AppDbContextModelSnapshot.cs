@@ -17,7 +17,7 @@ namespace FlowerHouse.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -30,6 +30,9 @@ namespace FlowerHouse.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Emoji")
+                        .HasColumnType("text");
 
                     b.Property<bool>("HasInscription")
                         .HasColumnType("boolean");
@@ -1116,7 +1119,7 @@ namespace FlowerHouse.Infrastructure.Migrations
             modelBuilder.Entity("FlowerHouse.Domain.Entities.ProductPackagingOption", b =>
                 {
                     b.HasOne("FlowerHouse.Domain.Entities.Product", "Product")
-                        .WithMany()
+                        .WithMany("PackagingOptions")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1138,7 +1141,7 @@ namespace FlowerHouse.Infrastructure.Migrations
             modelBuilder.Entity("FlowerHouse.Domain.Entities.ProductStemOption", b =>
                 {
                     b.HasOne("FlowerHouse.Domain.Entities.Product", "Product")
-                        .WithMany()
+                        .WithMany("StemOptions")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1208,7 +1211,11 @@ namespace FlowerHouse.Infrastructure.Migrations
                 {
                     b.Navigation("Images");
 
+                    b.Navigation("PackagingOptions");
+
                     b.Navigation("Sizes");
+
+                    b.Navigation("StemOptions");
                 });
 
             modelBuilder.Entity("FlowerHouse.Domain.Entities.Review", b =>

@@ -35,6 +35,8 @@ public class ProductService(AppDbContext db, IFileStorageService fileStorageServ
         var query = db.Products
             .Include(x => x.Sizes)
             .Include(x => x.Images)
+            .Include(x => x.PackagingOptions)
+            .Include(x => x.StemOptions)
             .AsNoTracking()
             .Where(x => x.IsActive);
 
@@ -65,24 +67,20 @@ public class ProductService(AppDbContext db, IFileStorageService fileStorageServ
         }
 
         if (priceMin.HasValue)
-        {
             query = query.Where(x => (x.BasePrice >= priceMin.Value) || x.Sizes.Any(s => s.Price >= priceMin.Value));
-        }
 
         if (priceMax.HasValue)
-        {
             query = query.Where(x => (x.BasePrice <= priceMax.Value) || x.Sizes.Any(s => s.Price <= priceMax.Value));
-        }
 
         if (!string.IsNullOrWhiteSpace(sort))
         {
             query = sort.ToLower() switch
             {
-                "price_asc" => query.OrderBy(x => x.BasePrice ?? (x.Sizes.OrderBy(s => s.Price).Select(s => s.Price).FirstOrDefault())),
+                "price_asc"  => query.OrderBy(x => x.BasePrice ?? (x.Sizes.OrderBy(s => s.Price).Select(s => s.Price).FirstOrDefault())),
                 "price_desc" => query.OrderByDescending(x => x.BasePrice ?? (x.Sizes.OrderByDescending(s => s.Price).Select(s => s.Price).FirstOrDefault())),
-                "new" => query.OrderByDescending(x => x.CreatedAt),
-                "popular" => query.OrderByDescending(x => x.IsHit).ThenBy(x => x.SortOrder),
-                _ => query.OrderBy(x => x.SortOrder)
+                "new"        => query.OrderByDescending(x => x.CreatedAt),
+                "popular"    => query.OrderByDescending(x => x.IsHit).ThenBy(x => x.SortOrder),
+                _            => query.OrderBy(x => x.SortOrder)
             };
         }
         else
@@ -98,13 +96,7 @@ public class ProductService(AppDbContext db, IFileStorageService fileStorageServ
             .ProjectToType<ProductDto>()
             .ToListAsync();
 
-        return new PagedResult<ProductDto>
-        {
-            Items = items,
-            Page = page,
-            PageSize = pageSize,
-            TotalCount = total
-        };
+        return new PagedResult<ProductDto> { Items = items, Page = page, PageSize = pageSize, TotalCount = total };
     }
 
     public async Task<ProductDto?> GetBySlugAsync(string slug)
@@ -112,6 +104,8 @@ public class ProductService(AppDbContext db, IFileStorageService fileStorageServ
         var product = await db.Products
             .Include(x => x.Sizes)
             .Include(x => x.Images)
+            .Include(x => x.PackagingOptions)
+            .Include(x => x.StemOptions)
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Slug == slug && x.IsActive);
 
@@ -120,7 +114,33 @@ public class ProductService(AppDbContext db, IFileStorageService fileStorageServ
 
     public async Task<ProductDto> CreateAsync(CreateProductRequest request)
     {
-        var product = request.Adapt<Product>();
+        var product = new Product
+        {
+            Slug          = request.Slug,
+            Name          = request.Name,
+            Composition   = request.Composition,
+            Description   = request.Description,
+            Kind          = request.Kind,
+            Freshness     = request.Freshness,
+            BasePrice     = request.BasePrice,
+            IsNew         = request.IsNew,
+            IsHit         = request.IsHit,
+            InStock       = request.InStock,
+            DeliverToday  = request.DeliverToday,
+            Occasions     = [.. request.Occasions],
+            FlowerTypes   = [.. request.FlowerTypes],
+            Colors        = [.. request.Colors],
+        };
+
+        foreach (var s in request.Sizes)
+            product.Sizes.Add(new ProductSize { Label = s.Label, Price = s.Price, OldPrice = s.OldPrice, ImageUrl = s.ImageUrl });
+
+        foreach (var p in request.PackagingOptions)
+            product.PackagingOptions.Add(new ProductPackagingOption { Type = p.Type, PriceDelta = p.PriceDelta });
+
+        foreach (var s in request.StemOptions)
+            product.StemOptions.Add(new ProductStemOption { Count = s.Count, Price = s.Price });
+
         db.Products.Add(product);
         await db.SaveChangesAsync();
 
@@ -131,28 +151,64 @@ public class ProductService(AppDbContext db, IFileStorageService fileStorageServ
     {
         var product = await db.Products
             .Include(x => x.Sizes)
+            .Include(x => x.PackagingOptions)
+            .Include(x => x.StemOptions)
             .FirstOrDefaultAsync(x => x.Id == id);
 
         if (product is null)
             throw new Exception("Product not found.");
 
-        request.Adapt(product);
-        product.UpdatedAt = DateTime.UtcNow;
+        product.Slug         = request.Slug;
+        product.Name         = request.Name;
+        product.Composition  = request.Composition;
+        product.Description  = request.Description;
+        product.Kind         = request.Kind;
+        product.Freshness    = request.Freshness;
+        product.BasePrice    = request.BasePrice;
+        product.IsNew        = request.IsNew;
+        product.IsHit        = request.IsHit;
+        product.InStock      = request.InStock;
+        product.DeliverToday = request.DeliverToday;
+        product.Occasions    = [.. request.Occasions];
+        product.FlowerTypes  = [.. request.FlowerTypes];
+        product.Colors       = [.. request.Colors];
+        product.UpdatedAt    = DateTime.UtcNow;
+
+        db.ProductSizes.RemoveRange(product.Sizes);
+        product.Sizes.Clear();
+        foreach (var s in request.Sizes)
+            product.Sizes.Add(new ProductSize { ProductId = id, Label = s.Label, Price = s.Price, OldPrice = s.OldPrice, ImageUrl = s.ImageUrl });
+
+        db.ProductPackagingOptions.RemoveRange(product.PackagingOptions);
+        product.PackagingOptions.Clear();
+        foreach (var p in request.PackagingOptions)
+            product.PackagingOptions.Add(new ProductPackagingOption { ProductId = id, Type = p.Type, PriceDelta = p.PriceDelta });
+
+        db.ProductStemOptions.RemoveRange(product.StemOptions);
+        product.StemOptions.Clear();
+        foreach (var s in request.StemOptions)
+            product.StemOptions.Add(new ProductStemOption { ProductId = id, Count = s.Count, Price = s.Price });
 
         await db.SaveChangesAsync();
-        return product.Adapt<ProductDto>();
+
+        var updated = await db.Products
+            .Include(x => x.Sizes)
+            .Include(x => x.Images)
+            .Include(x => x.PackagingOptions)
+            .Include(x => x.StemOptions)
+            .AsNoTracking()
+            .FirstAsync(x => x.Id == id);
+
+        return updated.Adapt<ProductDto>();
     }
 
     public async Task<bool> DeleteAsync(Guid id)
     {
         var product = await db.Products.FindAsync(id);
+        if (product is null) return false;
 
-        if (product is null)
-            return false;
-
-        product.IsActive = false;
+        product.IsActive  = false;
         product.UpdatedAt = DateTime.UtcNow;
-
         await db.SaveChangesAsync();
         return true;
     }
@@ -162,6 +218,8 @@ public class ProductService(AppDbContext db, IFileStorageService fileStorageServ
         return await db.Products
             .Include(x => x.Sizes)
             .Include(x => x.Images)
+            .Include(x => x.PackagingOptions)
+            .Include(x => x.StemOptions)
             .AsNoTracking()
             .Where(x => x.IsActive && x.IsHit)
             .OrderBy(x => x.SortOrder)
@@ -179,38 +237,28 @@ public class ProductService(AppDbContext db, IFileStorageService fileStorageServ
 
         if (isPrimary)
         {
-            var oldPrimaryImages = await db.ProductImages
+            var oldPrimary = await db.ProductImages
                 .Where(x => x.ProductId == productId && x.IsPrimary)
                 .ToListAsync();
-            foreach (var img in oldPrimaryImages)
-            {
-                img.IsPrimary = false;
-            }
+            foreach (var img in oldPrimary) img.IsPrimary = false;
         }
 
-        var productImage = new ProductImage
+        db.ProductImages.Add(new ProductImage
         {
             ProductId = productId,
-            Url = imageUrl,
+            Url       = imageUrl,
             IsPrimary = isPrimary,
-            SortOrder = 0
-        };
+        });
 
-        db.ProductImages.Add(productImage);
         await db.SaveChangesAsync();
-
         return imageUrl;
     }
 
-    public async Task<bool> DeleteImageAsync(Guid productId, Guid imgId)
+    public async Task<bool> DeleteImageAsync(Guid productId, Guid imageId)
     {
         var image = await db.ProductImages
-            .FirstOrDefaultAsync(x => x.ProductId == productId && x.Id == imgId);
-
-        if (image is null)
-            return false;
-
-        await fileStorageService.DeleteFileAsync(image.Url);
+            .FirstOrDefaultAsync(x => x.Id == imageId && x.ProductId == productId);
+        if (image is null) return false;
 
         db.ProductImages.Remove(image);
         await db.SaveChangesAsync();

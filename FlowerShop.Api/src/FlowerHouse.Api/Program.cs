@@ -3,7 +3,6 @@ using FlowerHouse.Application;
 using FlowerHouse.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,7 +29,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 12345abcdef\""
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token."
     });
     options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
@@ -45,39 +44,6 @@ builder.Services.AddSwaggerGen(options =>
             },
             Array.Empty<string>()
         }
-    });
-});
-builder.Services.AddOpenApi(options =>
-{
-    options.AddDocumentTransformer((document, context, cancellationToken) =>
-    {
-        var scheme = new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-        {
-            Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-            Scheme = "bearer",
-            BearerFormat = "JWT",
-            In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-            Description = "JWT Authorization header using the Bearer scheme."
-        };
-
-        document.Components ??= new Microsoft.OpenApi.Models.OpenApiComponents();
-        document.Components.SecuritySchemes ??= new Dictionary<string, Microsoft.OpenApi.Models.OpenApiSecurityScheme>();
-        document.Components.SecuritySchemes["Bearer"] = scheme;
-
-        var requirement = new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-        {
-            [new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            }] = Array.Empty<string>()
-        };
-        document.SecurityRequirements = new List<Microsoft.OpenApi.Models.OpenApiSecurityRequirement> { requirement };
-
-        return Task.CompletedTask;
     });
 });
 
@@ -107,7 +73,15 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000", "http://localhost:5173")
+            .WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://localhost:5175",
+                "http://localhost:5176",
+                "http://localhost:5177",
+                "http://localhost:5178",
+                "http://localhost:5280")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -121,11 +95,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.MapOpenApi();
-    app.MapScalarApiReference();
 }
-
-app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
