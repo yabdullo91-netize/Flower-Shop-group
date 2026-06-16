@@ -10,6 +10,13 @@ public class AuthService(AppDbContext db, IJwtService jwtService) : IAuthService
 {
     public async Task SendOtpAsync(SendOtpRequest request)
     {
+        // Invalidate all previous unused OTPs for this phone to prevent accumulation
+        var oldOtps = await db.OtpCodes
+            .Where(x => x.Phone == request.Phone && !x.Used)
+            .ToListAsync();
+        foreach (var old in oldOtps)
+            old.Used = true;
+
         var code = "111111"; // mock OTP for development
         var hash = BCrypt.Net.BCrypt.HashPassword(code);
 
@@ -146,15 +153,11 @@ public class AuthService(AppDbContext db, IJwtService jwtService) : IAuthService
         if (exists)
             throw new Exception("User already registered. Please login.");
 
-        var role = request.Role ?? "Customer";
-        if (role != "Customer" && role != "Admin" && role != "SuperAdmin")
-            throw new Exception("Invalid role. Role must be Customer, Admin, or SuperAdmin.");
-
         var user = new User
         {
             Phone = request.Phone,
             Name = request.Name,
-            Role = role,
+            Role = "Customer",
             IsBlocked = false
         };
 

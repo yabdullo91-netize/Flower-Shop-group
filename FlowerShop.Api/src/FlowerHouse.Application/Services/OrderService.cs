@@ -156,8 +156,8 @@ public class OrderService(
             });
         }
 
-        // 7. Delivery fee (flat 15.00, free for orders above 150.00)
-        decimal deliveryFee = subtotal >= 150 ? 0 : 15;
+        // 7. Delivery fee (flat 40.00, free for orders above 1500.00)
+        decimal deliveryFee = subtotal >= 1500 ? 0 : 40;
         decimal total = Math.Max(0, subtotal - discountAmount + deliveryFee);
 
         // 8. Create Order

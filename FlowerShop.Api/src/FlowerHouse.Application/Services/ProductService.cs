@@ -78,8 +78,9 @@ public class ProductService(AppDbContext db, IFileStorageService fileStorageServ
             {
                 "price_asc"  => query.OrderBy(x => x.BasePrice ?? (x.Sizes.OrderBy(s => s.Price).Select(s => s.Price).FirstOrDefault())),
                 "price_desc" => query.OrderByDescending(x => x.BasePrice ?? (x.Sizes.OrderByDescending(s => s.Price).Select(s => s.Price).FirstOrDefault())),
-                "new"        => query.OrderByDescending(x => x.CreatedAt),
+                "new" or "newest" => query.OrderByDescending(x => x.CreatedAt),
                 "popular"    => query.OrderByDescending(x => x.IsHit).ThenBy(x => x.SortOrder),
+                "rating"     => query.OrderByDescending(x => x.Rating).ThenByDescending(x => x.ReviewCount),
                 _            => query.OrderBy(x => x.SortOrder)
             };
         }

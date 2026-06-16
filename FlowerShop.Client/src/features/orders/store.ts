@@ -5,12 +5,12 @@ import { apiClient } from '@/shared/lib/apiClient'
 export type OrderStatus = 'Принят' | 'Собирается' | 'Фото готово' | 'Курьер в пути' | 'Доставлен' | 'Отменён'
 
 const STATUS_MAP: Record<string, OrderStatus> = {
-  Pending: 'Принят',
-  Processing: 'Собирается',
+  Accepted:   'Принят',
+  Preparing:  'Собирается',
   PhotoReady: 'Фото готово',
-  OutForDelivery: 'Курьер в пути',
-  Delivered: 'Доставлен',
-  Cancelled: 'Отменён',
+  Delivering: 'Курьер в пути',
+  Delivered:  'Доставлен',
+  Cancelled:  'Отменён',
 }
 
 export interface OrderItem {
@@ -32,6 +32,8 @@ export interface OrderAddon {
 
 export interface Order {
   id: string
+  /** Raw UUID from the backend — used for API calls (e.g. cancel). Absent for locally-created orders. */
+  apiId?: string
   date: string
   items: OrderItem[]
   addons: OrderAddon[]
@@ -66,6 +68,7 @@ function mapApiOrder(o: {
 }): Order {
   return {
     id: o.orderNumber || o.id,
+    apiId: o.id,
     date: new Date(o.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
     items: o.items.map(i => ({
       productId: i.productId,
@@ -133,11 +136,12 @@ export const useOrdersStore = create<OrdersStore>()(
       cancelOrder: async (id) => {
         const order = get().orders.find(o => o.id === id)
         if (!order || order.status !== 'Принят') return
-        try {
-          // Try to cancel on the backend (id might be a UUID or order number)
-          await apiClient.patch(`/orders/my/${id}/cancel`)
-        } catch {
-          // If the backend call fails (e.g. id is order number), update locally anyway
+        if (order.apiId) {
+          try {
+            await apiClient.patch(`/orders/my/${order.apiId}/cancel`)
+          } catch {
+            // network error — still update locally
+          }
         }
         set(s => ({
           orders: s.orders.map(o =>

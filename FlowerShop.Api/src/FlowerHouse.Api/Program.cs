@@ -91,6 +91,21 @@ var app = builder.Build();
 
 app.UseSerilogRequestLogging();
 
+// Global exception handler: converts service exceptions to 400 Bad Request instead of 500
+app.UseExceptionHandler(errApp =>
+{
+    errApp.Run(async ctx =>
+    {
+        var feature = ctx.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        if (feature?.Error is not null)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.WriteAsJsonAsync(new { error = feature.Error.Message });
+        }
+    });
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

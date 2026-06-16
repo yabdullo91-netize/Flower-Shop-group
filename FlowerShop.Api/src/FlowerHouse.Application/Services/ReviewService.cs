@@ -21,6 +21,14 @@ public class ReviewService(AppDbContext db) : IReviewService
         if (order is null || order.UserId != userId)
             throw new Exception("Order not found or access denied.");
 
+        if (order.Status != Domain.Enums.OrderStatus.Delivered)
+            throw new Exception("You can only review delivered orders.");
+
+        var alreadyReviewed = await db.Reviews.AnyAsync(
+            x => x.UserId == userId && x.OrderId == request.OrderId && x.ProductId == request.ProductId);
+        if (alreadyReviewed)
+            throw new Exception("You have already reviewed this product for this order.");
+
         var review = new Review
         {
             UserId = userId,

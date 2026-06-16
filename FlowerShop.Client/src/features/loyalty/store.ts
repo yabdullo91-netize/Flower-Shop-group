@@ -21,13 +21,13 @@ export interface LoyaltyTierInfo {
 }
 
 export const TIERS: LoyaltyTierInfo[] = [
-  { tier: 'bronze', label: 'Бронза',  emoji: '🥉', minPoints: 0,    nextTierPoints: 300,  color: 'text-orange-600' },
-  { tier: 'silver', label: 'Серебро', emoji: '🥈', minPoints: 300,  nextTierPoints: 1000, color: 'text-slate-400' },
+  { tier: 'bronze', label: 'Бронза',  emoji: '🥉', minPoints: 0,    nextTierPoints: 500,  color: 'text-orange-600' },
+  { tier: 'silver', label: 'Серебро', emoji: '🥈', minPoints: 500,  nextTierPoints: 1000, color: 'text-slate-400' },
   { tier: 'gold',   label: 'Золото',  emoji: '🥇', minPoints: 1000, nextTierPoints: null, color: 'text-gold' },
 ]
 
-// 1 балл за каждые 20 сомони потрачено
-export const EARN_DIVISOR   = 20
+// 1 балл за каждые 10 сомони потрачено (10% от суммы заказа, 1 балл = 1 сомони)
+export const EARN_DIVISOR   = 10
 // 1 балл = 1 сомони при списании
 export const REDEEM_RATE    = 1
 // минимум для списания

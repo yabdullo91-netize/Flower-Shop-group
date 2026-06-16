@@ -31,8 +31,7 @@ public class PromoService(AppDbContext db) : IPromoService
 
         if (promo.DiscountPct.HasValue)
             discount = request.OrderTotal * promo.DiscountPct.Value / 100;
-
-        if (promo.DiscountFixed.HasValue)
+        else if (promo.DiscountFixed.HasValue)
             discount = promo.DiscountFixed.Value;
 
         return new
