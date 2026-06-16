@@ -50,7 +50,7 @@ public class DeliveryService(HttpClient http)
     /// <param name="id">Идентификатор слота.</param>
     /// <param name="request">Обновлённые данные.</param>
     /// <returns>true, если слот успешно обновлён.</returns>
-    public async Task<bool> UpdateAsync(int id, TimeSlotCreateRequest request)
+    public async Task<bool> UpdateAsync(Guid id, TimeSlotCreateRequest request)
     {
         try
         {
@@ -68,7 +68,7 @@ public class DeliveryService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор слота.</param>
     /// <returns>true, если слот успешно удалён.</returns>
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(Guid id)
     {
         try
         {

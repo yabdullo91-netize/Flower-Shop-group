@@ -43,7 +43,7 @@ public class ReviewService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор отзыва.</param>
     /// <returns>true, если отзыв успешно одобрен.</returns>
-    public async Task<bool> ApproveAsync(int id)
+    public async Task<bool> ApproveAsync(Guid id)
     {
         try
         {
@@ -61,7 +61,7 @@ public class ReviewService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор отзыва.</param>
     /// <returns>true, если отзыв успешно отклонён.</returns>
-    public async Task<bool> RejectAsync(int id)
+    public async Task<bool> RejectAsync(Guid id)
     {
         try
         {

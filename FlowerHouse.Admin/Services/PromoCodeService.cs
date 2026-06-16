@@ -54,7 +54,7 @@ public class PromoCodeService(HttpClient http)
     /// <param name="id">Идентификатор промокода.</param>
     /// <param name="request">Обновлённые данные.</param>
     /// <returns>true, если промокод успешно обновлён.</returns>
-    public async Task<bool> UpdateAsync(int id, PromoCodeCreateRequest request)
+    public async Task<bool> UpdateAsync(Guid id, PromoCodeCreateRequest request)
     {
         try
         {
@@ -72,7 +72,7 @@ public class PromoCodeService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор промокода.</param>
     /// <returns>true, если промокод успешно удалён.</returns>
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(Guid id)
     {
         try
         {
