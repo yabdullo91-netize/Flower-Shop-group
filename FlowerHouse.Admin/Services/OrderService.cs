@@ -58,7 +58,7 @@ public class OrderService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор заказа.</param>
     /// <returns>Заказ или null, если не найден.</returns>
-    public async Task<OrderDto?> GetOrderAsync(int id)
+    public async Task<OrderDto?> GetOrderAsync(Guid id)
     {
         try
         {
@@ -76,7 +76,7 @@ public class OrderService(HttpClient http)
     /// <param name="id">Идентификатор заказа.</param>
     /// <param name="request">Новый статус и комментарий.</param>
     /// <returns>true, если статус успешно обновлён.</returns>
-    public async Task<bool> UpdateStatusAsync(int id, OrderStatusUpdateRequest request)
+    public async Task<bool> UpdateStatusAsync(Guid id, OrderStatusUpdateRequest request)
     {
         try
         {
@@ -95,7 +95,7 @@ public class OrderService(HttpClient http)
     /// <param name="id">Идентификатор заказа.</param>
     /// <param name="content">Содержимое формы с файлом.</param>
     /// <returns>true, если фото успешно загружено.</returns>
-    public async Task<bool> UploadPhotoAsync(int id, MultipartFormDataContent content)
+    public async Task<bool> UploadPhotoAsync(Guid id, MultipartFormDataContent content)
     {
         try
         {

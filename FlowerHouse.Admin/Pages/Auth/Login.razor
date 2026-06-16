@@ -129,34 +129,7 @@
             </div>
         }
 
-        @* Разделитель *@
-        <div class="relative flex py-5 items-center my-4">
-            <div class="flex-grow border-t border-slate-200 dark:border-zinc-800"></div>
-            <span class="flex-shrink mx-4 text-slate-400 dark:text-zinc-500 text-[10px] uppercase font-bold tracking-widest">ДЕМО-ДОСТУП</span>
-            <div class="flex-grow border-t border-slate-200 dark:border-zinc-800"></div>
-        </div>
 
-        @* Демо-вход без бэкенда *@
-        <div class="grid grid-cols-2 gap-3 mb-2">
-            <button class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 dark:border-zinc-800 hover:border-violet-500/50 dark:hover:border-violet-500/50 bg-white dark:bg-zinc-900 hover:bg-violet-50/20 dark:hover:bg-violet-950/10 text-xs font-semibold text-slate-700 dark:text-zinc-300 transition-all shadow-sm"
-                    @onclick="() => DemoLoginAsync(false)">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span>Администратор</span>
-            </button>
-            <button class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 bg-white dark:bg-zinc-900 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 text-xs font-semibold text-slate-700 dark:text-zinc-300 transition-all shadow-sm"
-                    @onclick="() => DemoLoginAsync(true)">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <span>Супер-админ</span>
-            </button>
-        </div>
-
-        <p class="text-[10px] text-center text-slate-400 dark:text-zinc-500 font-medium mt-3">
-            Демо-доступ позволяет протестировать весь интерфейс без авторизации по SMS
-        </p>
     </div>
 </div>
 
@@ -295,25 +268,5 @@
         _timer?.Dispose();
     }
 
-    /// <summary>
-    /// Демо-вход: создаёт JWT без обращения к API (для тестирования UI).
-    /// </summary>
-    private async Task DemoLoginAsync(bool isSuperAdmin)
-    {
-        // Создаём JWT вручную: header.payload.signature (подпись не проверяется на клиенте)
-        // Payload: { "sub": "1", "name": "Demo Admin", "role": "SuperAdmin", "exp": 2099999999 }
-        // Payload regular Admin: { "sub": "2", "name": "Regular Admin", "role": "Admin", "exp": 2099999999 }
-        string demoToken = isSuperAdmin
-            ? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" +
-              ".eyJzdWIiOiIxIiwibmFtZSI6IkRlbW8gQWRtaW4iLCJyb2xlIjoiU3VwZXJBZG1pbiIsImV4cCI6MjA5OTk5OTk5OX0" +
-              ".demo_signature_not_verified_on_client"
-            : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" +
-              ".eyJzdWIiOiIyIiwibmFtZSI6IlJlZ3VsYXIgQWRtaW4iLCJyb2xlIjoiQWRtaW4iLCJleHAiOjIwOTk5OTk5OTl9" +
-              ".demo_signature_not_verified_on_client";
 
-        await AuthState.MarkUserAsAuthenticated(demoToken, "demo_refresh");
-        string roleName = isSuperAdmin ? "SuperAdmin" : "Admin";
-        Snackbar.Add($"Демо-вход выполнен! Роль: {roleName}", Severity.Success);
-        Navigation.NavigateTo("/", forceLoad: false);
-    }
 }

@@ -1,5 +1,5 @@
 @page "/products/new"
-@page "/products/{Id:int}/edit"
+@page "/products/{Id:guid}/edit"
 @attribute [Authorize(Roles = "Admin,SuperAdmin")]
 
 @inject ProductService ProductService
@@ -201,7 +201,7 @@ else
 }
 
 @code {
-    [Parameter] public int? Id { get; set; }
+    [Parameter] public Guid? Id { get; set; }
 
     private bool _isEdit => Id.HasValue;
     private bool _loading = true;
@@ -270,7 +270,7 @@ else
 
     private void OnFilesSelected(List<IBrowserFile> files) => _newFiles = files;
 
-    private async Task DeleteExistingImage(int imageId)
+    private async Task DeleteExistingImage(Guid imageId)
     {
         if (_isEdit)
         {
@@ -286,7 +286,7 @@ else
         _model.Sizes = _sizes.Count > 0 ? _sizes : null;
 
         bool ok;
-        int productId;
+        Guid? productId;
 
         if (_isEdit)
         {
@@ -297,10 +297,10 @@ else
         {
             var created = await ProductService.CreateProductAsync(_model);
             ok = created != null;
-            productId = created?.Id ?? 0;
+            productId = created?.Id;
         }
 
-        if (ok && _newFiles.Count > 0 && productId > 0)
+        if (ok && _newFiles.Count > 0 && productId.HasValue)
         {
             var content = new MultipartFormDataContent();
             foreach (var file in _newFiles)
@@ -308,7 +308,7 @@ else
                 var stream = file.OpenReadStream(5 * 1024 * 1024);
                 content.Add(new StreamContent(stream), "files", file.Name);
             }
-            await ProductService.UploadImagesAsync(productId, content);
+            await ProductService.UploadImagesAsync(productId.Value, content);
         }
 
         _saving = false;

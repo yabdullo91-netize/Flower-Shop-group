@@ -50,7 +50,7 @@ public class ContentService(HttpClient http)
     /// <param name="id">Идентификатор баннера.</param>
     /// <param name="content">Содержимое формы с обновлёнными данными.</param>
     /// <returns>true, если баннер успешно обновлён.</returns>
-    public async Task<bool> UpdateBannerAsync(int id, MultipartFormDataContent content)
+    public async Task<bool> UpdateBannerAsync(Guid id, MultipartFormDataContent content)
     {
         try
         {
@@ -68,7 +68,7 @@ public class ContentService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор баннера.</param>
     /// <returns>true, если баннер успешно удалён.</returns>
-    public async Task<bool> DeleteBannerAsync(int id)
+    public async Task<bool> DeleteBannerAsync(Guid id)
     {
         try
         {

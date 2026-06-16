@@ -48,7 +48,7 @@ public class ProductService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор товара.</param>
     /// <returns>Товар или null, если не найден.</returns>
-    public async Task<ProductDto?> GetProductAsync(int id)
+    public async Task<ProductDto?> GetProductAsync(Guid id)
     {
         try
         {
@@ -88,7 +88,7 @@ public class ProductService(HttpClient http)
     /// <param name="id">Идентификатор товара.</param>
     /// <param name="request">Обновлённые данные товара.</param>
     /// <returns>true, если товар успешно обновлён.</returns>
-    public async Task<bool> UpdateProductAsync(int id, ProductCreateRequest request)
+    public async Task<bool> UpdateProductAsync(Guid id, ProductCreateRequest request)
     {
         try
         {
@@ -106,7 +106,7 @@ public class ProductService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор товара.</param>
     /// <returns>true, если товар успешно удалён.</returns>
-    public async Task<bool> DeleteProductAsync(int id)
+    public async Task<bool> DeleteProductAsync(Guid id)
     {
         try
         {
@@ -125,7 +125,7 @@ public class ProductService(HttpClient http)
     /// <param name="id">Идентификатор товара.</param>
     /// <param name="content">Содержимое формы с файлами.</param>
     /// <returns>true, если изображения успешно загружены.</returns>
-    public async Task<bool> UploadImagesAsync(int id, MultipartFormDataContent content)
+    public async Task<bool> UploadImagesAsync(Guid id, MultipartFormDataContent content)
     {
         try
         {
@@ -144,7 +144,7 @@ public class ProductService(HttpClient http)
     /// <param name="productId">Идентификатор товара.</param>
     /// <param name="imageId">Идентификатор изображения.</param>
     /// <returns>true, если изображение успешно удалено.</returns>
-    public async Task<bool> DeleteImageAsync(int productId, int imageId)
+    public async Task<bool> DeleteImageAsync(Guid productId, Guid imageId)
     {
         try
         {

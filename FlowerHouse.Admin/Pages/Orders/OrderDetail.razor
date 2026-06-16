@@ -1,4 +1,4 @@
-п»ї@page "/orders/{Id:int}"
+@page "/orders/{Id:guid}"
 @attribute [Authorize(Roles = "Admin,SuperAdmin")]
 
 @inject OrderService OrderService
@@ -6,7 +6,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>FlowerHouse вЂ” Р”РµС‚Р°Р»Рё Р·Р°РєР°Р·Р°</PageTitle>
+<PageTitle>FlowerHouse — Детали заказа</PageTitle>
 
 @if (_loading)
 {
@@ -19,12 +19,12 @@
 else if (_order == null)
 {
     <div class="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-950/30 text-rose-600 dark:text-rose-400 p-4 rounded-xl text-xs mb-4">
-        Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ
+        Заказ не найден
     </div>
     <button @onclick="@(() => Navigation.NavigateTo("/orders"))" 
             class="px-4 py-2 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-lg text-xs font-semibold hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5">
         <LucideIcon Name="chevron-left" Class="w-3.5 h-3.5" />
-        <span>Р’РµСЂРЅСѓС‚СЊСЃСЏ Рє СЃРїРёСЃРєСѓ</span>
+        <span>Вернуться к списку</span>
     </button>
 }
 else
@@ -33,88 +33,88 @@ else
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 select-none">
         <div>
             <div class="flex items-center gap-2">
-                <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">Р—Р°РєР°Р· #@_order.OrderNumber</h1>
+                <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">Заказ #@_order.OrderNumber</h1>
                 <StatusBadge Status="@_order.Status" />
             </div>
-            <p class="text-xs text-slate-500 dark:text-zinc-400">Р”РµС‚Р°Р»СЊРЅР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ Рѕ Р·Р°РєР°Р·Рµ Рё СѓРїСЂР°РІР»РµРЅРёРµ Р¶РёР·РЅРµРЅРЅС‹Рј С†РёРєР»РѕРј</p>
+            <p class="text-xs text-slate-500 dark:text-zinc-400">Детальная информация о заказе и управление жизненным циклом</p>
         </div>
         
         <button @onclick="@(() => Navigation.NavigateTo("/orders"))" 
                 class="px-3 py-1.5 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-lg text-xs font-semibold hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5">
             <LucideIcon Name="chevron-left" Class="w-3.5 h-3.5" />
-            <span>РќР°Р·Р°Рґ</span>
+            <span>Назад</span>
         </button>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        @* === Р›Р•Р’РђРЇ РљРћР›РћРќРљРђ (2/3) === *@
+        @* === ЛЕВАЯ КОЛОНКА (2/3) === *@
         <div class="lg:col-span-2 flex flex-col gap-6">
             
-            @* --- РРЅС„РѕСЂРјР°С†РёСЏ Рѕ РєР»РёРµРЅС‚Рµ --- *@
+            @* --- Информация о клиенте --- *@
             <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
                 <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
                     <LucideIcon Name="users" Class="w-4 h-4 text-indigo-500" />
-                    <span>РРЅС„РѕСЂРјР°С†РёСЏ Рѕ Р·Р°РєР°Р·С‡РёРєРµ</span>
+                    <span>Информация о заказчике</span>
                 </h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1">
-                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Р—Р°РєР°Р·С‡РёРє</span>
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Заказчик</span>
                         <span class="text-xs font-semibold text-slate-800 dark:text-zinc-200">@_order.CustomerName</span>
                         <span class="text-[11px] text-slate-500">@_order.CustomerPhone</span>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">РџРѕР»СѓС‡Р°С‚РµР»СЊ</span>
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Получатель</span>
                         <span class="text-xs font-semibold text-slate-800 dark:text-zinc-200">@_order.RecipientName</span>
                         <span class="text-[11px] text-slate-500">@_order.RecipientPhone</span>
                         @if (_order.IsAnonymous)
                         {
                             <span class="inline-flex mt-1 items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-950/30 max-w-max">
-                                РђРЅРѕРЅРёРјРЅР°СЏ РґРѕСЃС‚Р°РІРєР°
+                                Анонимная доставка
                             </span>
                         }
                     </div>
                 </div>
             </div>
 
-            @* --- Р”РѕСЃС‚Р°РІРєР° --- *@
+            @* --- Доставка --- *@
             <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
                 <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
                     <LucideIcon Name="truck" Class="w-4 h-4 text-indigo-500" />
-                    <span>РђРґСЂРµСЃ Рё СЃСЂРѕРєРё РґРѕСЃС‚Р°РІРєРё</span>
+                    <span>Адрес и сроки доставки</span>
                 </h3>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="sm:col-span-1 flex flex-col gap-1">
-                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">РђРґСЂРµСЃ РґРѕСЃС‚Р°РІРєРё</span>
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Адрес доставки</span>
                         <span class="text-xs text-slate-800 dark:text-zinc-200">@_order.DeliveryAddress</span>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Р”Р°С‚Р° РґРѕСЃС‚Р°РІРєРё</span>
-                        <span class="text-xs text-slate-800 dark:text-zinc-200">@(_order.DeliveryDate?.ToString("dd.MM.yyyy") ?? "вЂ”")</span>
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Дата доставки</span>
+                        <span class="text-xs text-slate-800 dark:text-zinc-200">@(_order.DeliveryDate?.ToString("dd.MM.yyyy") ?? "—")</span>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">РРЅС‚РµСЂРІР°Р» РІСЂРµРјРµРЅРё</span>
-                        <span class="text-xs text-slate-800 dark:text-zinc-200">@(_order.DeliveryTimeSlot ?? "вЂ”")</span>
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Интервал времени</span>
+                        <span class="text-xs text-slate-800 dark:text-zinc-200">@(_order.DeliveryTimeSlot ?? "—")</span>
                     </div>
                 </div>
             </div>
 
-            @* --- РџРѕР·РёС†РёРё Р·Р°РєР°Р·Р° --- *@
+            @* --- Позиции заказа --- *@
             <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
                 <div class="px-5 py-4 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 select-none">
                     <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
                         <LucideIcon Name="package" Class="w-4 h-4 text-indigo-500" />
-                        <span>РџРѕР·РёС†РёРё Р·Р°РєР°Р·Р° (@_order.Items.Count)</span>
+                        <span>Позиции заказа (@_order.Items.Count)</span>
                     </h3>
                 </div>
                 
                 <table class="w-full text-left border-collapse text-xs">
                     <thead class="bg-slate-50 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                         <tr>
-                            <th class="p-4 w-16">Р¤РѕС‚Рѕ</th>
-                            <th class="p-4">РўРѕРІР°СЂ</th>
-                            <th class="p-4 w-24 text-center">РљРѕР»-РІРѕ</th>
-                            <th class="p-4 w-28 text-right">Р¦РµРЅР°</th>
-                            <th class="p-4 w-28 text-right">РЎСѓРјРјР°</th>
+                            <th class="p-4 w-16">Фото</th>
+                            <th class="p-4">Товар</th>
+                            <th class="p-4 w-24 text-center">Кол-во</th>
+                            <th class="p-4 w-28 text-right">Цена</th>
+                            <th class="p-4 w-28 text-right">Сумма</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 dark:divide-zinc-800 text-slate-700 dark:text-zinc-300">
@@ -137,36 +137,36 @@ else
                                     <div class="font-semibold text-slate-800 dark:text-zinc-200">@item.ProductName</div>
                                     @if (!string.IsNullOrEmpty(item.SizeName))
                                     {
-                                        <div class="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Р Р°Р·РјРµСЂ: @item.SizeName</div>
+                                        <div class="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Размер: @item.SizeName</div>
                                     }
                                 </td>
                                 <td class="p-4 text-center">@item.Quantity</td>
-                                <td class="p-4 text-right">@item.Price.ToString("N0") СЃ.</td>
-                                <td class="p-4 text-right font-bold text-slate-900 dark:text-zinc-100">@((item.Price * item.Quantity).ToString("N0")) СЃ.</td>
+                                <td class="p-4 text-right">@item.Price.ToString("N0") с.</td>
+                                <td class="p-4 text-right font-bold text-slate-900 dark:text-zinc-100">@((item.Price * item.Quantity).ToString("N0")) с.</td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
 
-            @* --- Р”РѕРїРѕР»РЅРµРЅРёСЏ --- *@
+            @* --- Дополнения --- *@
             @if (_order.Addons?.Any() == true)
             {
                 <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm theme-transition">
                     <div class="px-5 py-4 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 select-none">
                         <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
                             <LucideIcon Name="gift" Class="w-4 h-4 text-indigo-500" />
-                            <span>Р”РѕРїРѕР»РЅРµРЅРёСЏ Рє Р·Р°РєР°Р·Сѓ</span>
+                            <span>Дополнения к заказу</span>
                         </h3>
                     </div>
                     
                     <table class="w-full text-left border-collapse text-xs">
                         <thead class="bg-slate-50 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                             <tr>
-                                <th class="p-4">РќР°Р·РІР°РЅРёРµ</th>
-                                <th class="p-4 w-24 text-center">РљРѕР»-РІРѕ</th>
-                                <th class="p-4 w-28 text-right">Р¦РµРЅР°</th>
-                                <th class="p-4 w-28 text-right">РЎСѓРјРјР°</th>
+                                <th class="p-4">Название</th>
+                                <th class="p-4 w-24 text-center">Кол-во</th>
+                                <th class="p-4 w-28 text-right">Цена</th>
+                                <th class="p-4 w-28 text-right">Сумма</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-200 dark:divide-zinc-800 text-slate-700 dark:text-zinc-300">
@@ -175,8 +175,8 @@ else
                                 <tr>
                                     <td class="p-4 font-semibold text-slate-800 dark:text-zinc-200">@addon.Name</td>
                                     <td class="p-4 text-center">@addon.Quantity</td>
-                                    <td class="p-4 text-right">@addon.Price.ToString("N0") СЃ.</td>
-                                    <td class="p-4 text-right font-bold text-slate-900 dark:text-zinc-100">@((addon.Price * addon.Quantity).ToString("N0")) СЃ.</td>
+                                    <td class="p-4 text-right">@addon.Price.ToString("N0") с.</td>
+                                    <td class="p-4 text-right font-bold text-slate-900 dark:text-zinc-100">@((addon.Price * addon.Quantity).ToString("N0")) с.</td>
                                 </tr>
                             }
                         </tbody>
@@ -184,23 +184,23 @@ else
                 </div>
             }
 
-            @* --- РћС‚РєСЂС‹С‚РєР° --- *@
+            @* --- Открытка --- *@
             @if (!string.IsNullOrEmpty(_order.PostcardText) || !string.IsNullOrEmpty(_order.PostcardImageUrl))
             {
                 <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
                     <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
                         <LucideIcon Name="mail" Class="w-4 h-4 text-indigo-500" />
-                        <span>РџРѕР·РґСЂР°РІРёС‚РµР»СЊРЅР°СЏ РѕС‚РєСЂС‹С‚РєР°</span>
+                        <span>Поздравительная открытка</span>
                     </h3>
                     <div class="flex flex-col sm:flex-row gap-4 items-start">
                         @if (!string.IsNullOrEmpty(_order.PostcardImageUrl))
                         {
-                            <img src="@_order.PostcardImageUrl" alt="РћС‚РєСЂС‹С‚РєР°" class="w-40 h-40 object-cover rounded-lg border border-slate-100 dark:border-zinc-800 shrink-0" />
+                            <img src="@_order.PostcardImageUrl" alt="Открытка" class="w-40 h-40 object-cover rounded-lg border border-slate-100 dark:border-zinc-800 shrink-0" />
                         }
                         @if (!string.IsNullOrEmpty(_order.PostcardText))
                         {
                             <div class="flex-grow p-4 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl italic text-xs text-slate-700 dark:text-zinc-300 relative">
-                                <span class="absolute top-2 left-2 text-2xl text-slate-200 dark:text-zinc-800 leading-none select-none">вЂњ</span>
+                                <span class="absolute top-2 left-2 text-2xl text-slate-200 dark:text-zinc-800 leading-none select-none">“</span>
                                 <p class="pl-4 pr-2 py-1 select-text">@_order.PostcardText</p>
                             </div>
                         }
@@ -208,13 +208,13 @@ else
                 </div>
             }
 
-            @* --- РҐСЂРѕРЅРѕР»РѕРіРёСЏ СЃС‚Р°С‚СѓСЃРѕРІ --- *@
+            @* --- Хронология статусов --- *@
             @if (_order.Timeline?.Any() == true)
             {
                 <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
                     <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
                         <LucideIcon Name="file-text" Class="w-4 h-4 text-indigo-500" />
-                        <span>РСЃС‚РѕСЂРёСЏ РёР·РјРµРЅРµРЅРёСЏ СЃС‚Р°С‚СѓСЃРѕРІ</span>
+                        <span>История изменения статусов</span>
                     </h3>
                     
                     <MudTimeline TimelinePosition="TimelinePosition.Start" Class="px-0">
@@ -244,30 +244,30 @@ else
             }
         </div>
 
-        @* === РџР РђР’РђРЇ РљРћР›РћРќРљРђ (1/3) === *@
+        @* === ПРАВАЯ КОЛОНКА (1/3) === *@
         <div class="flex flex-col gap-6">
             
-            @* --- РЎРјРµРЅР° РЎС‚Р°С‚СѓСЃР° --- *@
+            @* --- Смена Статуса --- *@
             <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-4 select-none">РЈРїСЂР°РІР»РµРЅРёРµ СЃС‚Р°С‚СѓСЃРѕРј</h3>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-4 select-none">Управление статусом</h3>
                 
                 <div class="flex items-center gap-2 mb-4 select-none">
-                    <span class="text-xs text-slate-400 dark:text-zinc-500">РўРµРєСѓС‰РёР№:</span>
+                    <span class="text-xs text-slate-400 dark:text-zinc-500">Текущий:</span>
                     <StatusBadge Status="@_order.Status" />
                 </div>
 
-                <MudSelect T="string" @bind-Value="_newStatus" Label="РќРѕРІС‹Р№ СЃС‚Р°С‚СѓСЃ"
+                <MudSelect T="string" @bind-Value="_newStatus" Label="Новый статус"
                            Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3 font-semibold text-xs">
-                    <MudSelectItem T="string" Value="@("new")">РќРѕРІС‹Р№</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("confirmed")">РџРѕРґС‚РІРµСЂР¶РґС‘РЅ</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("assembling")">РЎРѕР±РёСЂР°РµС‚СЃСЏ</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("ready")">Р¤РѕС‚Рѕ РіРѕС‚РѕРІРѕ</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("delivering")">Р”РѕСЃС‚Р°РІР»СЏРµС‚СЃСЏ</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("delivered")">Р”РѕСЃС‚Р°РІР»РµРЅ</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("cancelled")">РћС‚РјРµРЅС‘РЅ</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("new")">Новый</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("confirmed")">Подтверждён</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("assembling")">Собирается</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("ready")">Фото готово</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("delivering")">Доставляется</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("delivered")">Доставлен</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("cancelled")">Отменён</MudSelectItem>
                 </MudSelect>
 
-                <MudTextField @bind-Value="_statusComment" Label="РљРѕРјРјРµРЅС‚Р°СЂРёР№ Рє СЃС‚Р°С‚СѓСЃСѓ" Variant="Variant.Outlined"
+                <MudTextField @bind-Value="_statusComment" Label="Комментарий к статусу" Variant="Variant.Outlined"
                               Margin="Margin.Dense" Lines="2" Class="mb-4 text-xs" />
 
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
@@ -278,25 +278,25 @@ else
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     }
-                    РћР±РЅРѕРІРёС‚СЊ СЃС‚Р°С‚СѓСЃ
+                    Обновить статус
                 </MudButton>
             </div>
 
-            @* --- Р¤РѕС‚Рѕ Р—Р°РєР°Р·Р° --- *@
+            @* --- Фото Заказа --- *@
             <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
                 <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
                     <LucideIcon Name="image" Class="w-4 h-4 text-indigo-500" />
-                    <span>Р¤РѕС‚Рѕ РІС‹РїРѕР»РЅРµРЅРЅРѕРіРѕ Р·Р°РєР°Р·Р°</span>
+                    <span>Фото выполненного заказа</span>
                 </h3>
                 
                 @if (!string.IsNullOrEmpty(_order.PhotoUrl))
                 {
-                    <img src="@_order.PhotoUrl" alt="Р¤РѕС‚Рѕ Р·Р°РєР°Р·Р°" class="w-full max-h-52 object-cover rounded-lg border border-slate-100 dark:border-zinc-800 mb-4" />
+                    <img src="@_order.PhotoUrl" alt="Фото заказа" class="w-full max-h-52 object-cover rounded-lg border border-slate-100 dark:border-zinc-800 mb-4" />
                 }
                 else
                 {
                     <div class="p-4 bg-slate-50 dark:bg-zinc-950 border border-dashed border-slate-200 dark:border-zinc-800 text-center rounded-lg text-xs text-slate-400 mb-4 select-none">
-                        Р¤РѕС‚Рѕ РѕС‚ РєСѓСЂСЊРµСЂР° РµС‰Рµ РЅРµ Р·Р°РіСЂСѓР¶РµРЅРѕ
+                        Фото от курьера еще не загружено
                     </div>
                 }
 
@@ -307,40 +307,40 @@ else
                 }
             </div>
 
-            @* --- РС‚РѕРі РћРїР»Р°С‚С‹ --- *@
+            @* --- Итог Оплаты --- *@
             <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm theme-transition">
                 <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2 mb-4 select-none">
                     <LucideIcon Name="percent" Class="w-4 h-4 text-indigo-500" />
-                    <span>Р Р°СЃС‡С‘С‚ СЃС‚РѕРёРјРѕСЃС‚Рё</span>
+                    <span>Расчёт стоимости</span>
                 </h3>
                 
                 <div class="flex flex-col gap-2.5 text-xs text-slate-700 dark:text-zinc-300">
                     <div class="flex justify-between items-center">
-                        <span class="text-slate-400 dark:text-zinc-500">РџРѕРґС‹С‚РѕРі:</span>
-                        <span>@_order.Subtotal.ToString("N0") СЃ.</span>
+                        <span class="text-slate-400 dark:text-zinc-500">Подытог:</span>
+                        <span>@_order.Subtotal.ToString("N0") с.</span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-slate-400 dark:text-zinc-500">Р”РѕСЃС‚Р°РІРєР°:</span>
-                        <span>@_order.DeliveryFee.ToString("N0") СЃ.</span>
+                        <span class="text-slate-400 dark:text-zinc-500">Доставка:</span>
+                        <span>@_order.DeliveryFee.ToString("N0") с.</span>
                     </div>
                     @if (_order.Discount > 0)
                     {
                         <div class="flex justify-between items-center text-rose-500">
-                            <span>РЎРєРёРґРєР°:</span>
-                            <span>-@_order.Discount.ToString("N0") СЃ.</span>
+                            <span>Скидка:</span>
+                            <span>-@_order.Discount.ToString("N0") с.</span>
                         </div>
                     }
                     @if (_order.BonusUsed > 0)
                     {
                         <div class="flex justify-between items-center text-amber-500">
-                            <span>Р‘РѕРЅСѓСЃС‹:</span>
-                            <span>-@_order.BonusUsed.ToString("N0") СЃ.</span>
+                            <span>Бонусы:</span>
+                            <span>-@_order.BonusUsed.ToString("N0") с.</span>
                         </div>
                     }
                     @if (!string.IsNullOrEmpty(_order.PromoCode))
                     {
                         <div class="flex justify-between items-center select-none">
-                            <span class="text-slate-400 dark:text-zinc-500">РџСЂРѕРјРѕРєРѕРґ:</span>
+                            <span class="text-slate-400 dark:text-zinc-500">Промокод:</span>
                             <span class="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-950/30 text-[10px] font-bold">
                                 @_order.PromoCode
                             </span>
@@ -348,12 +348,12 @@ else
                     }
                     <hr class="border-slate-100 dark:border-zinc-800 my-1" />
                     <div class="flex justify-between items-center text-sm font-bold text-slate-900 dark:text-zinc-50">
-                        <span>РС‚РѕРіРѕ Рє РѕРїР»Р°С‚Рµ:</span>
-                        <span class="text-indigo-600 dark:text-indigo-400 text-base">@_order.Total.ToString("N0") СЃ.</span>
+                        <span>Итого к оплате:</span>
+                        <span class="text-indigo-600 dark:text-indigo-400 text-base">@_order.Total.ToString("N0") с.</span>
                     </div>
                     <hr class="border-slate-100 dark:border-zinc-800 my-1" />
                     <div class="flex justify-between items-center select-none">
-                        <span class="text-slate-400 dark:text-zinc-500">РЎРїРѕСЃРѕР± РѕРїР»Р°С‚С‹:</span>
+                        <span class="text-slate-400 dark:text-zinc-500">Способ оплаты:</span>
                         <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold text-[10px] uppercase">
                             @_order.PaymentMethod
                         </span>
@@ -366,7 +366,7 @@ else
 }
 
 @code {
-    [Parameter] public int Id { get; set; }
+    [Parameter] public Guid Id { get; set; }
 
     private OrderDto? _order;
     private bool _loading = true;
@@ -377,9 +377,9 @@ else
 
     private List<BreadcrumbItem> _breadcrumbs = new()
     {
-        new("Р“Р»Р°РІРЅР°СЏ", href: "/"),
-        new("Р—Р°РєР°Р·С‹", href: "/orders"),
-        new("Р—Р°РіСЂСѓР·РєР°...", href: null, disabled: true)
+        new("Главная", href: "/"),
+        new("Заказы", href: "/orders"),
+        new("Загрузка...", href: null, disabled: true)
     };
 
     protected override async Task OnInitializedAsync()
@@ -398,15 +398,15 @@ else
                 _newStatus = _order.Status;
                 _breadcrumbs = new()
                 {
-                    new("Р“Р»Р°РІРЅР°СЏ", href: "/"),
-                    new("Р—Р°РєР°Р·С‹", href: "/orders"),
-                    new($"Р—Р°РєР°Р· #{_order.OrderNumber}", href: null, disabled: true)
+                    new("Главная", href: "/"),
+                    new("Заказы", href: "/orders"),
+                    new($"Заказ #{_order.OrderNumber}", href: null, disabled: true)
                 };
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё Р·Р°РєР°Р·Р°: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Ошибка загрузки заказа: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -429,18 +429,18 @@ else
             var success = await OrderService.UpdateStatusAsync(Id, request);
             if (success)
             {
-                Snackbar.Add("РЎС‚Р°С‚СѓСЃ Р·Р°РєР°Р·Р° РѕР±РЅРѕРІР»С‘РЅ", Severity.Success);
+                Snackbar.Add("Статус заказа обновлён", Severity.Success);
                 _statusComment = "";
                 await LoadOrder();
             }
             else
             {
-                Snackbar.Add("РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ СЃС‚Р°С‚СѓСЃ", Severity.Error);
+                Snackbar.Add("Не удалось обновить статус", Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"РћС€РёР±РєР°: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -462,17 +462,17 @@ else
             var success = await OrderService.UploadPhotoAsync(Id, content);
             if (success)
             {
-                Snackbar.Add("Р¤РѕС‚Рѕ Р·Р°РіСЂСѓР¶РµРЅРѕ", Severity.Success);
+                Snackbar.Add("Фото загружено", Severity.Success);
                 await LoadOrder();
             }
             else
             {
-                Snackbar.Add("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С„РѕС‚Рѕ", Severity.Error);
+                Snackbar.Add("Не удалось загрузить фото", Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё С„РѕС‚Рѕ: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Ошибка загрузки фото: {ex.Message}", Severity.Error);
         }
         finally
         {

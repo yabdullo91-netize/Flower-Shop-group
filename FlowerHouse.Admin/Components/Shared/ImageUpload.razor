@@ -1,4 +1,4 @@
-п»ї@* Drag & Drop Р·Р°РіСЂСѓР·РєР° РёР·РѕР±СЂР°Р¶РµРЅРёР№ СЃ РїСЂРµРІСЊСЋ *@
+@* Drag & Drop загрузка изображений с превью *@
 
 <MudPaper Outlined="true" Class="pa-4" Style="border-radius: 12px; border-style: dashed;">
     <MudFileUpload T="IReadOnlyList<IBrowserFile>"
@@ -16,21 +16,21 @@
                       Class="@($"d-flex flex-column align-center justify-center gap-2 {_dragClass}")">
                 <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" />
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    РџРµСЂРµС‚Р°С‰РёС‚Рµ С„Р°Р№Р»С‹ СЃСЋРґР° РёР»Рё РЅР°Р¶РјРёС‚Рµ РґР»СЏ РІС‹Р±РѕСЂР°
+                    Перетащите файлы сюда или нажмите для выбора
                 </MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                    Р¤РѕСЂРјР°С‚С‹: JPG, PNG, WebP вЂў РњР°РєСЃ. @MaxFiles С„Р°Р№Р»РѕРІ вЂў Р”Рѕ @MaxSizeMb РњР‘ РєР°Р¶РґС‹Р№
+                    Форматы: JPG, PNG, WebP • Макс. @MaxFiles файлов • До @MaxSizeMb МБ каждый
                 </MudText>
             </MudPaper>
         </ActivatorContent>
     </MudFileUpload>
 
-    @* РџСЂРµРІСЊСЋ Р·Р°РіСЂСѓР¶РµРЅРЅС‹С… С„Р°Р№Р»РѕРІ *@
+    @* Превью загруженных файлов *@
     @if (_previewUrls.Count > 0)
     {
         <MudDivider Class="my-3" />
         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-            Р’С‹Р±СЂР°РЅРѕ С„Р°Р№Р»РѕРІ: @_previewUrls.Count
+            Выбрано файлов: @_previewUrls.Count
         </MudText>
         <MudGrid Spacing="2">
             @foreach (var (url, index) in _previewUrls.Select((u, i) => (u, i)))
@@ -49,12 +49,12 @@
         </MudGrid>
     }
 
-    @* РЎСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ (РґР»СЏ СЂРµР¶РёРјР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ) *@
+    @* Существующие изображения (для режима редактирования) *@
     @if (ExistingImages?.Any() == true)
     {
         <MudDivider Class="my-3" />
         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-            РўРµРєСѓС‰РёРµ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ:
+            Текущие изображения:
         </MudText>
         <MudGrid Spacing="2">
             @foreach (var img in ExistingImages)
@@ -83,7 +83,7 @@
     [Parameter] public int MaxSizeMb { get; set; } = 5;
     [Parameter] public List<ExistingImageInfo>? ExistingImages { get; set; }
     [Parameter] public EventCallback<List<IBrowserFile>> OnFilesSelected { get; set; }
-    [Parameter] public EventCallback<int> OnDeleteExisting { get; set; }
+    [Parameter] public EventCallback<Guid> OnDeleteExisting { get; set; }
 
     private List<IBrowserFile> _files = [];
     private List<string> _previewUrls = [];
@@ -101,7 +101,7 @@
 
             _files.Add(file);
 
-            // Р“РµРЅРµСЂР°С†РёСЏ РїСЂРµРІСЊСЋ
+            // Генерация превью
             try
             {
                 var resized = await file.RequestImageFileAsync("image/jpeg", 200, 200);
@@ -112,7 +112,7 @@
             }
             catch
             {
-                _previewUrls.Add(""); // Р•СЃР»Рё РїСЂРµРІСЊСЋ РЅРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ
+                _previewUrls.Add(""); // Если превью не получилось
             }
         }
 
@@ -133,11 +133,11 @@
     private void ClearDragClass() => _dragClass = "";
 
     /// <summary>
-    /// РРЅС„РѕСЂРјР°С†РёСЏ Рѕ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРј РёР·РѕР±СЂР°Р¶РµРЅРёРё (РґР»СЏ СЂРµР¶РёРјР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ).
+    /// Информация о существующем изображении (для режима редактирования).
     /// </summary>
     public class ExistingImageInfo
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public string Url { get; set; } = "";
     }
 }

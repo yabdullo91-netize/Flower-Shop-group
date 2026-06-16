@@ -52,7 +52,7 @@ public class PostcardService(HttpClient http)
     /// <param name="id">Идентификатор открытки.</param>
     /// <param name="request">Обновлённые данные.</param>
     /// <returns>true, если открытка успешно обновлена.</returns>
-    public async Task<bool> UpdatePostcardAsync(int id, PostcardCreateRequest request)
+    public async Task<bool> UpdatePostcardAsync(Guid id, PostcardCreateRequest request)
     {
         try
         {
@@ -70,7 +70,7 @@ public class PostcardService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор открытки.</param>
     /// <returns>true, если открытка успешно удалена.</returns>
-    public async Task<bool> DeletePostcardAsync(int id)
+    public async Task<bool> DeletePostcardAsync(Guid id)
     {
         try
         {
@@ -127,7 +127,7 @@ public class PostcardService(HttpClient http)
     /// <param name="id">Идентификатор шаблона.</param>
     /// <param name="request">Обновлённые данные.</param>
     /// <returns>true, если шаблон успешно обновлён.</returns>
-    public async Task<bool> UpdateTemplateAsync(int id, MessageTemplateCreateRequest request)
+    public async Task<bool> UpdateTemplateAsync(Guid id, MessageTemplateCreateRequest request)
     {
         try
         {
@@ -145,7 +145,7 @@ public class PostcardService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор шаблона.</param>
     /// <returns>true, если шаблон успешно удалён.</returns>
-    public async Task<bool> DeleteTemplateAsync(int id)
+    public async Task<bool> DeleteTemplateAsync(Guid id)
     {
         try
         {

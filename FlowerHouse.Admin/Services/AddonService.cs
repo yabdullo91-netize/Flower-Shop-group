@@ -50,7 +50,7 @@ public class AddonService(HttpClient http)
     /// <param name="id">Идентификатор дополнения.</param>
     /// <param name="request">Обновлённые данные.</param>
     /// <returns>true, если дополнение успешно обновлено.</returns>
-    public async Task<bool> UpdateAsync(int id, AddonCreateRequest request)
+    public async Task<bool> UpdateAsync(Guid id, AddonCreateRequest request)
     {
         try
         {
@@ -68,7 +68,7 @@ public class AddonService(HttpClient http)
     /// </summary>
     /// <param name="id">Идентификатор дополнения.</param>
     /// <returns>true, если дополнение успешно удалено.</returns>
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(Guid id)
     {
         try
         {
